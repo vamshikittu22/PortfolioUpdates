@@ -1,85 +1,103 @@
 'use client';
 
 import React from 'react';
-import { TrendingUp, Award, Layers, ShieldAlert, Sparkles } from 'lucide-react';
+import { Wallet, Activity, Bell, MessageSquareQuote } from 'lucide-react';
+import { KPICard } from '@/components/dashboard/KPICard';
+import { HoldingsTable } from '@/components/dashboard/HoldingsTable';
+import { AllocationChart } from '@/components/dashboard/AllocationChart';
+import { WatchlistTable } from '@/components/dashboard/WatchlistTable';
+import { NewsFeed } from '@/components/dashboard/NewsFeed';
+import { 
+  MOCK_PORTFOLIO_STATS, 
+  MOCK_HOLDINGS, 
+  MOCK_ALLOCATION, 
+  MOCK_WATCHLIST, 
+  MOCK_NEWS 
+} from '@/lib/mock-portfolio';
 
 export default function DashboardPage() {
+  const stats = MOCK_PORTFOLIO_STATS;
+
+  // Format currency
+  const totalValueFormatted = new Intl.NumberFormat('en-IN', {
+    style: 'currency',
+    currency: 'INR',
+    maximumFractionDigits: 0
+  }).format(stats.totalValue);
+
+  const dayChangeFormatted = new Intl.NumberFormat('en-IN', {
+    style: 'currency',
+    currency: 'INR',
+    maximumFractionDigits: 0
+  }).format(stats.dayChangeValue);
+
   return (
     <div className="space-y-6">
-      {/* Welcome Hero Banner */}
-      <div className="glass-card rounded-2xl p-6 md:p-8 relative overflow-hidden glass-card-glow">
-        <div className="absolute top-0 right-0 w-64 h-64 rounded-full bg-primary/5 blur-[80px] pointer-events-none" />
-        <div className="relative z-10 max-w-xl space-y-3">
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-primary/10 border border-primary/20 rounded-full text-xs text-primary font-medium">
-            <Sparkles className="h-3 w-3" />
-            <span>Step 1 Active</span>
-          </div>
-          <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight">
-            Welcome to <span className="bg-gradient-to-r from-primary to-crypto bg-clip-text text-transparent">FolioIntel</span>
-          </h1>
-          <p className="text-sm md:text-base text-muted-foreground leading-relaxed">
-            Your read-only personal portfolio intelligence dashboard is starting to take shape. All core system configurations, styles, and routing structures have been established.
-          </p>
+      {/* Row 1: KPI Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <KPICard 
+          title="Portfolio Value"
+          value={totalValueFormatted}
+          icon={<Wallet className="h-4.5 w-4.5" />}
+          trend={{
+            value: `${stats.dayChangePercent}%`,
+            isPositive: stats.dayChangePercent >= 0,
+          }}
+          subtitle="Updated just now"
+        />
+        
+        <KPICard 
+          title="Today's P&L"
+          value={`${stats.dayChangeValue >= 0 ? '+' : ''}${dayChangeFormatted}`}
+          icon={<Activity className="h-4.5 w-4.5" />}
+          trend={{
+            value: 'Day',
+            isPositive: stats.dayChangeValue >= 0,
+            label: `Weekly: ${stats.weekChangePercent >= 0 ? '+' : ''}${stats.weekChangePercent}%`
+          }}
+        />
+        
+        <KPICard 
+          title="Watchlist Alerts"
+          value={stats.watchlistAlerts.toString()}
+          icon={<Bell className="h-4.5 w-4.5" />}
+          trend={{
+            value: 'New',
+            isPositive: true,
+          }}
+          subtitle="Symbols moving > 2%"
+        />
+        
+        <KPICard 
+          title="Daily Sentiment"
+          value={`${stats.sentimentSummary.bullish} Bullish`}
+          icon={<MessageSquareQuote className="h-4.5 w-4.5" />}
+          trendIsNeutral={true}
+          trend={{
+            value: 'AI',
+            isPositive: true,
+            label: `${stats.sentimentSummary.bearish} Bearish · ${stats.sentimentSummary.neutral} Neutral`
+          }}
+        />
+      </div>
+
+      {/* Row 2: Holdings & Allocation */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        <div className="lg:col-span-8">
+          <HoldingsTable holdings={MOCK_HOLDINGS} />
+        </div>
+        <div className="lg:col-span-4">
+          <AllocationChart data={MOCK_ALLOCATION} />
         </div>
       </div>
 
-      {/* Grid of Core Module Statuses */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-        <div className="glass-card rounded-xl p-5 space-y-4">
-          <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
-            <Layers className="h-5 w-5" />
-          </div>
-          <div>
-            <h3 className="font-bold text-base">Supabase Database</h3>
-            <p className="text-xs text-muted-foreground mt-1">
-              All 8 database schemas, constraints, and Row Level Security policies have been initialized.
-            </p>
-          </div>
-          <div className="text-[10px] uppercase font-semibold text-primary bg-primary/10 px-2 py-0.5 rounded-full inline-block">
-            Initialized
-          </div>
+      {/* Row 3 & 4: Watchlist & News */}
+      <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
+        <div className="xl:col-span-8">
+          <WatchlistTable items={MOCK_WATCHLIST} />
         </div>
-
-        <div className="glass-card rounded-xl p-5 space-y-4">
-          <div className="h-10 w-10 rounded-lg bg-crypto/10 flex items-center justify-center text-crypto">
-            <Award className="h-5 w-5" />
-          </div>
-          <div>
-            <h3 className="font-bold text-base">Authentication System</h3>
-            <p className="text-xs text-muted-foreground mt-1">
-              Middlewares, OAuth callback pipelines, and route guards redirect unauthenticated requests to `/login`.
-            </p>
-          </div>
-          <div className="text-[10px] uppercase font-semibold text-crypto bg-crypto/10 px-2 py-0.5 rounded-full inline-block">
-            Armed
-          </div>
-        </div>
-
-        <div className="glass-card rounded-xl p-5 space-y-4">
-          <div className="h-10 w-10 rounded-lg bg-warning/10 flex items-center justify-center text-warning">
-            <ShieldAlert className="h-5 w-5" />
-          </div>
-          <div>
-            <h3 className="font-bold text-base">Visual Shell & Theme</h3>
-            <p className="text-xs text-muted-foreground mt-1">
-              Collapsible sidebar, top navigation drawer, theme sync state, and styling constants are configured.
-            </p>
-          </div>
-          <div className="text-[10px] uppercase font-semibold text-warning bg-warning/10 px-2 py-0.5 rounded-full inline-block">
-            Dark (Default)
-          </div>
-        </div>
-      </div>
-
-      {/* Database Schema Visualizer Quick Cards */}
-      <div className="glass-card rounded-xl p-5">
-        <h3 className="font-bold text-lg mb-3">Database Tables Created</h3>
-        <div className="flex flex-wrap gap-2">
-          {['profiles', 'brokers', 'holdings', 'price_cache', 'news_items', 'yt_channels', 'yt_videos', 'alerts'].map((tbl) => (
-            <span key={tbl} className="text-xs font-mono bg-muted/60 border border-border/80 px-2.5 py-1 rounded-lg">
-              {tbl}
-            </span>
-          ))}
+        <div className="xl:col-span-4">
+          <NewsFeed news={MOCK_NEWS} />
         </div>
       </div>
     </div>

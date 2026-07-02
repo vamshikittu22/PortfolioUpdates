@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { createClient } from '@/utils/supabase/client';
 import { useAppStore } from '@/store/useAppStore';
+import { usePortfolioStore } from '@/store/usePortfolioStore';
 import {
   LayoutDashboard,
   Briefcase,
@@ -20,7 +21,9 @@ import {
   ChevronLeft,
   ChevronRight,
   TrendingUp,
-  User
+  User,
+  ChevronDown,
+  Check
 } from 'lucide-react';
 
 const Youtube = (props: React.SVGProps<SVGSVGElement>) => (
@@ -42,6 +45,7 @@ interface SidebarItem {
   name: string;
   href: string;
   icon: React.ComponentType<any>;
+  badge?: number;
 }
 
 const navigationItems: SidebarItem[] = [
@@ -49,7 +53,7 @@ const navigationItems: SidebarItem[] = [
   { name: 'Holdings', href: '/holdings', icon: Briefcase },
   { name: 'News', href: '/news', icon: Newspaper },
   { name: 'YouTube Intel', href: '/youtube', icon: Youtube },
-  { name: 'Alerts', href: '/alerts', icon: Bell },
+  { name: 'Alerts', href: '/alerts', icon: Bell, badge: 3 },
   { name: 'Settings', href: '/settings', icon: Settings },
 ];
 
@@ -66,6 +70,10 @@ export default function DashboardLayout({
   const [userEmail, setUserEmail] = useState<string | null>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
+  const [accountDropdownOpen, setAccountDropdownOpen] = useState(false);
+
+  const { accounts, selectedAccountId, switchAccount } = usePortfolioStore();
+  const selectedAccount = selectedAccountId ? accounts[selectedAccountId] : null;
 
   useEffect(() => {
     // Get user email
@@ -140,6 +148,16 @@ export default function DashboardLayout({
                 }`} />
                 {!sidebarCollapsed && <span>{item.name}</span>}
                 
+                {/* Badge */}
+                {item.badge && !sidebarCollapsed && (
+                  <span className="ml-auto bg-danger text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">
+                    {item.badge}
+                  </span>
+                )}
+                {item.badge && sidebarCollapsed && (
+                  <span className="absolute top-2 right-2 h-2.5 w-2.5 rounded-full bg-danger border-2 border-card" />
+                )}
+                
                 {/* Tooltip for collapsed mode */}
                 {sidebarCollapsed && (
                   <div className="absolute left-full ml-4 px-2 py-1 bg-popover border border-border text-xs rounded opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity whitespace-nowrap z-50 shadow-md">
@@ -204,9 +222,24 @@ export default function DashboardLayout({
             >
               <Menu className="h-5 w-5" />
             </button>
-            <h2 className="text-lg font-bold text-foreground tracking-tight">
-              {getPageTitle()}
-            </h2>
+            <div className="flex flex-col">
+              <div className="flex items-center gap-2">
+                <h2 className="text-lg font-bold text-foreground tracking-tight">
+                  {getPageTitle()}
+                </h2>
+                {pathname === '/' && (
+                  <span className="hidden sm:inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-success/10 border border-success/20 text-[10px] font-bold text-success uppercase tracking-wider">
+                    <span className="h-1.5 w-1.5 rounded-full bg-success animate-pulse" />
+                    Market Open
+                  </span>
+                )}
+              </div>
+              {pathname === '/' && (
+                <span className="text-[10px] text-muted-foreground font-medium hidden sm:block">
+                  Updated 2m ago
+                </span>
+              )}
+            </div>
           </div>
 
           {/* Search bar placeholder & Right actions */}
@@ -214,11 +247,46 @@ export default function DashboardLayout({
             {/* Command Palette Search Trigger */}
             <button className="hidden sm:flex items-center gap-2 px-3 py-1.5 bg-background border border-border/60 hover:border-primary/40 rounded-xl text-xs text-muted-foreground hover:text-foreground transition-all w-52 md:w-64 cursor-pointer">
               <Search className="h-3.5 w-3.5" />
-              <span>Search holdings, news...</span>
+              <span>Search tickers, companies, news...</span>
               <kbd className="ml-auto pointer-events-none inline-flex h-5 select-none items-center gap-0.5 rounded border border-border bg-muted px-1.5 font-mono text-[9px] font-medium text-muted-foreground">
                 ⌘K
               </kbd>
             </button>
+
+            {/* Account Switcher */}
+            <div className="relative hidden md:block">
+              <button
+                onClick={() => setAccountDropdownOpen(!accountDropdownOpen)}
+                className="flex items-center gap-2 px-3 py-1.5 bg-muted/30 border border-border/60 hover:bg-muted/50 rounded-xl text-sm font-semibold transition-colors cursor-pointer"
+              >
+                {selectedAccount ? selectedAccount.profile.name : 'Select Account'}
+                <ChevronDown className="h-4 w-4 text-muted-foreground" />
+              </button>
+              
+              {accountDropdownOpen && (
+                <>
+                  <div className="fixed inset-0 z-30" onClick={() => setAccountDropdownOpen(false)} />
+                  <div className="absolute right-0 mt-2 w-48 bg-card border border-border/80 rounded-xl shadow-lg py-1.5 z-40 animate-in fade-in slide-in-from-top-1">
+                    <div className="px-3 py-1.5 border-b border-border/30 mb-1">
+                      <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Portfolios</p>
+                    </div>
+                    {Object.values(accounts).map((acc) => (
+                      <button
+                        key={acc.accountId}
+                        onClick={() => {
+                          switchAccount(acc.accountId);
+                          setAccountDropdownOpen(false);
+                        }}
+                        className="w-full flex items-center justify-between px-3 py-2 text-sm text-foreground hover:bg-muted/50 transition-colors cursor-pointer text-left"
+                      >
+                        {acc.profile.name}
+                        {selectedAccountId === acc.accountId && <Check className="h-4 w-4 text-primary" />}
+                      </button>
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
 
             {/* Theme Toggle */}
             <button
@@ -288,7 +356,7 @@ export default function DashboardLayout({
               <Link
                 key={item.name}
                 href={item.href}
-                className={`flex flex-col items-center justify-center flex-1 py-1 text-center cursor-pointer transition-colors ${
+                className={`flex flex-col items-center justify-center flex-1 py-1 text-center cursor-pointer transition-colors relative ${
                   isActive ? 'text-primary' : 'text-muted-foreground hover:text-foreground'
                 }`}
               >
@@ -296,6 +364,9 @@ export default function DashboardLayout({
                 <span className="text-[10px] mt-1 font-medium scale-90 truncate max-w-full">
                   {item.name.split(' ')[0]}
                 </span>
+                {item.badge && (
+                  <span className="absolute top-1 right-2 h-2 w-2 rounded-full bg-danger border border-card" />
+                )}
               </Link>
             );
           })}
@@ -355,6 +426,11 @@ export default function DashboardLayout({
                   >
                     <Icon className="h-5 w-5" />
                     <span>{item.name}</span>
+                    {item.badge && (
+                      <span className="ml-auto bg-danger text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">
+                        {item.badge}
+                      </span>
+                    )}
                   </Link>
                 );
               })}
