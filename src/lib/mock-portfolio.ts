@@ -38,6 +38,15 @@ export interface NewsItem {
   category: 'Holdings' | 'Watchlist' | 'Macro';
 }
 
+export interface AlertItem {
+  id: string;
+  symbol: string;
+  type: 'price_above' | 'price_below' | 'sentiment_change' | 'news_spike';
+  threshold: string;
+  isActive: boolean;
+  delivery: 'Email' | 'Push' | 'In-App';
+}
+
 export const MOCK_PORTFOLIO_STATS = {
   totalValue: 1247830.50, // INR
   dayChangeValue: 8420.25,

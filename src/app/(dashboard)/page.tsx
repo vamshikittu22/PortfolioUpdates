@@ -7,27 +7,28 @@ import { HoldingsTable } from '@/components/dashboard/HoldingsTable';
 import { AllocationChart } from '@/components/dashboard/AllocationChart';
 import { WatchlistTable } from '@/components/dashboard/WatchlistTable';
 import { NewsFeed } from '@/components/dashboard/NewsFeed';
-import { 
-  MOCK_PORTFOLIO_STATS, 
-  MOCK_HOLDINGS, 
-  MOCK_ALLOCATION, 
-  MOCK_WATCHLIST, 
-  MOCK_NEWS 
-} from '@/lib/mock-portfolio';
+import { usePortfolioStore } from '@/store/usePortfolioStore';
 
 export default function DashboardPage() {
-  const stats = MOCK_PORTFOLIO_STATS;
+  const { accounts, selectedAccountId } = usePortfolioStore();
+  
+  if (!selectedAccountId) return null;
+  
+  const selectedAccount = accounts[selectedAccountId];
+  const { stats, holdings, allocation, watchlist, news, profile } = selectedAccount;
 
-  // Format currency
-  const totalValueFormatted = new Intl.NumberFormat('en-IN', {
+  // Format currency based on account setting
+  const currencySymbol = profile.baseCurrency === 'INR' ? '₹' : '$';
+  
+  const totalValueFormatted = new Intl.NumberFormat(profile.baseCurrency === 'INR' ? 'en-IN' : 'en-US', {
     style: 'currency',
-    currency: 'INR',
+    currency: profile.baseCurrency,
     maximumFractionDigits: 0
   }).format(stats.totalValue);
 
-  const dayChangeFormatted = new Intl.NumberFormat('en-IN', {
+  const dayChangeFormatted = new Intl.NumberFormat(profile.baseCurrency === 'INR' ? 'en-IN' : 'en-US', {
     style: 'currency',
-    currency: 'INR',
+    currency: profile.baseCurrency,
     maximumFractionDigits: 0
   }).format(stats.dayChangeValue);
 
@@ -40,7 +41,7 @@ export default function DashboardPage() {
           value={totalValueFormatted}
           icon={<Wallet className="h-4.5 w-4.5" />}
           trend={{
-            value: `${stats.dayChangePercent}%`,
+            value: `${stats.dayChangePercent >= 0 ? '+' : ''}${stats.dayChangePercent}%`,
             isPositive: stats.dayChangePercent >= 0,
           }}
           subtitle="Updated just now"
@@ -84,20 +85,20 @@ export default function DashboardPage() {
       {/* Row 2: Holdings & Allocation */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         <div className="lg:col-span-8">
-          <HoldingsTable holdings={MOCK_HOLDINGS} />
+          <HoldingsTable holdings={holdings} />
         </div>
         <div className="lg:col-span-4">
-          <AllocationChart data={MOCK_ALLOCATION} />
+          <AllocationChart data={allocation} />
         </div>
       </div>
 
       {/* Row 3 & 4: Watchlist & News */}
       <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
         <div className="xl:col-span-8">
-          <WatchlistTable items={MOCK_WATCHLIST} />
+          <WatchlistTable items={watchlist} />
         </div>
         <div className="xl:col-span-4">
-          <NewsFeed news={MOCK_NEWS} />
+          <NewsFeed news={news} />
         </div>
       </div>
     </div>
