@@ -34,16 +34,16 @@ export function NewsFeed({ news }: NewsFeedProps) {
           Actionable Intelligence
         </h2>
         
-        <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
+        <div className="flex overflow-x-auto pb-2 scroll-smooth" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
           {['All', 'Holdings', 'Watchlist', 'Macro'].map((f) => (
             <button
               key={f}
               onClick={() => setFilter(f as FilterType)}
               className={cn(
-                'px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-colors',
+                'px-3.5 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-all border shrink-0 mr-2 last:mr-0 cursor-pointer',
                 filter === f 
-                  ? 'bg-primary text-primary-foreground shadow-md shadow-primary/20' 
-                  : 'bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground'
+                  ? 'bg-primary text-primary-foreground border-primary shadow-md shadow-primary/20' 
+                  : 'bg-muted/30 text-muted-foreground border-border/50 hover:bg-muted/80 hover:text-foreground hover:border-border'
               )}
             >
               {f}

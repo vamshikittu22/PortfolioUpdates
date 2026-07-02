@@ -35,8 +35,8 @@ export function HoldingsTable({ holdings }: HoldingsTableProps) {
           <thead className="bg-muted/20 text-muted-foreground text-xs uppercase font-semibold">
             <tr>
               <th className="px-5 py-4 tracking-wider">Asset</th>
-              <th className="px-5 py-4 tracking-wider text-right">Price</th>
-              <th className="px-5 py-4 tracking-wider text-right">Day Change</th>
+              <th className="px-5 py-4 tracking-wider text-right">Avg Price</th>
+              <th className="px-5 py-4 tracking-wider text-right">Current Price</th>
               <th className="px-5 py-4 tracking-wider text-right">Total Return</th>
               <th className="px-5 py-4 tracking-wider text-right">Source</th>
             </tr>
@@ -57,22 +57,25 @@ export function HoldingsTable({ holdings }: HoldingsTableProps) {
                     </div>
                   </div>
                 </td>
-                <td className="px-5 py-3 text-right font-tabular">
-                  {formatCurrency(h.currentPrice)}
+                <td className="px-5 py-3 text-right">
+                  <span className="font-tabular font-medium text-foreground">
+                    {formatCurrency(h.avgPrice)}
+                  </span>
                 </td>
-                <td className="px-5 py-3 text-right font-tabular">
+                <td className="px-5 py-3 text-right">
+                  <div className="font-tabular font-medium text-foreground">{formatCurrency(h.currentPrice)}</div>
                   <div className={cn(
-                    'inline-flex items-center gap-1 font-medium',
+                    'text-[10px] font-semibold font-tabular flex items-center justify-end gap-0.5 mt-0.5',
                     h.dayChange >= 0 ? 'text-success' : 'text-danger'
                   )}>
-                    {h.dayChange >= 0 ? <ArrowUpRight className="h-3 w-3" /> : <ArrowDownRight className="h-3 w-3" />}
+                    {h.dayChange >= 0 ? <ArrowUpRight className="h-2.5 w-2.5" /> : <ArrowDownRight className="h-2.5 w-2.5" />}
                     {Math.abs(h.dayChange)}%
                   </div>
                 </td>
-                <td className="px-5 py-3 text-right font-tabular">
+                <td className="px-5 py-3 text-right">
                   <div className={cn(
-                    'inline-flex items-center gap-1 font-medium',
-                    h.totalChange >= 0 ? 'text-success' : 'text-danger'
+                    'inline-flex items-center justify-end gap-1 px-2 py-1 rounded-md text-xs font-bold font-tabular',
+                    h.totalChange >= 0 ? 'bg-success/10 text-success' : 'bg-danger/10 text-danger'
                   )}>
                     {h.totalChange >= 0 ? '+' : '-'}{Math.abs(h.totalChange)}%
                   </div>

@@ -186,8 +186,8 @@ export default function DashboardLayout({
                   <User className="h-4.5 w-4.5" />
                 </div>
                 <div className="min-w-0">
-                  <p className="text-xs font-semibold text-foreground truncate">{userEmail?.split('@')[0]}</p>
-                  <p className="text-[10px] text-muted-foreground truncate">{userEmail}</p>
+                  <p className="text-xs font-bold text-foreground truncate">{selectedAccount ? selectedAccount.profile.name : 'FolioIntel'}</p>
+                  <p className="text-[10px] text-muted-foreground truncate uppercase tracking-wider font-semibold">Active Portfolio</p>
                 </div>
               </div>
               <button
@@ -443,8 +443,8 @@ export default function DashboardLayout({
                     <User className="h-4.5 w-4.5" />
                   </div>
                   <div className="min-w-0">
-                    <p className="text-xs font-semibold text-foreground truncate">{userEmail?.split('@')[0]}</p>
-                    <p className="text-[10px] text-muted-foreground truncate">{userEmail}</p>
+                    <p className="text-xs font-bold text-foreground truncate">{selectedAccount ? selectedAccount.profile.name : 'FolioIntel'}</p>
+                    <p className="text-[10px] text-muted-foreground truncate uppercase tracking-wider font-semibold">Active Portfolio</p>
                   </div>
                 </div>
                 <button
