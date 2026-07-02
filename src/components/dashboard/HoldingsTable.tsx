@@ -31,38 +31,39 @@ export function HoldingsTable({ holdings }: HoldingsTableProps) {
       </div>
 
       <div className="overflow-x-auto">
-        <table className="w-full text-sm text-left">
+        <table className="w-full text-sm">
           <thead className="bg-muted/20 text-muted-foreground text-xs uppercase font-semibold">
             <tr>
-              <th className="px-5 py-4 tracking-wider">Asset</th>
+              <th className="px-5 py-4 tracking-wider text-left">Asset</th>
               <th className="px-5 py-4 tracking-wider text-right">Avg Price</th>
               <th className="px-5 py-4 tracking-wider text-right">Current Price</th>
               <th className="px-5 py-4 tracking-wider text-right">Total Return</th>
-              <th className="px-5 py-4 tracking-wider text-right">Source</th>
+              <th className="px-5 py-4 tracking-wider text-left">Source</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-border/30">
             {holdings.map((h) => (
               <tr key={h.id} className="hover:bg-muted/10 transition-colors group">
-                <td className="px-5 py-3">
-                  <div className="flex flex-col">
-                    <span className="font-bold text-foreground">{h.ticker}</span>
-                    <div className="flex items-center gap-2 mt-0.5">
-                      <span className="text-[10px] text-muted-foreground truncate max-w-[120px]">
+                <td className="px-5 py-3.5">
+                  <div className="flex flex-col gap-1">
+                    <span className="text-sm font-bold text-foreground tracking-tight">{h.ticker}</span>
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-[11px] text-muted-foreground/80 truncate max-w-[150px]">
                         {h.name}
                       </span>
-                      <span className="px-1.5 py-0.5 rounded text-[9px] font-semibold bg-muted text-muted-foreground border border-border/50">
+                      <span className="text-[11px] text-muted-foreground/40">·</span>
+                      <span className="px-1.5 py-px rounded text-[9px] font-medium bg-muted/50 text-muted-foreground/70 border border-border/30">
                         {h.sector}
                       </span>
                     </div>
                   </div>
                 </td>
-                <td className="px-5 py-3 text-right">
+                <td className="px-5 py-3.5 text-right">
                   <span className="font-tabular font-medium text-foreground">
                     {formatCurrency(h.avgPrice)}
                   </span>
                 </td>
-                <td className="px-5 py-3 text-right">
+                <td className="px-5 py-3.5 text-right">
                   <div className="font-tabular font-medium text-foreground">{formatCurrency(h.currentPrice)}</div>
                   <div className={cn(
                     'text-[10px] font-semibold font-tabular flex items-center justify-end gap-0.5 mt-0.5',
@@ -72,7 +73,7 @@ export function HoldingsTable({ holdings }: HoldingsTableProps) {
                     {Math.abs(h.dayChange)}%
                   </div>
                 </td>
-                <td className="px-5 py-3 text-right">
+                <td className="px-5 py-3.5 text-right">
                   <div className={cn(
                     'inline-flex items-center justify-end gap-1 px-2 py-1 rounded-md text-xs font-bold font-tabular',
                     h.totalChange >= 0 ? 'bg-success/10 text-success' : 'bg-danger/10 text-danger'
@@ -80,7 +81,7 @@ export function HoldingsTable({ holdings }: HoldingsTableProps) {
                     {h.totalChange >= 0 ? '+' : '-'}{Math.abs(h.totalChange)}%
                   </div>
                 </td>
-                <td className="px-5 py-3 text-right">
+                <td className="px-5 py-3.5 text-left">
                   <span className={cn(
                     'px-2 py-1 rounded-md text-[10px] font-semibold border',
                     h.broker === 'Groww' ? 'bg-[#22c55e]/10 text-[#22c55e] border-[#22c55e]/20' :

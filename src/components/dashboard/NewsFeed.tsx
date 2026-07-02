@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Newspaper, Clock, ExternalLink } from 'lucide-react';
+import { Newspaper, Clock, ExternalLink, Briefcase, Eye, Globe } from 'lucide-react';
 import type { NewsItem } from '@/lib/mock-portfolio';
 import { cn } from '@/utils/cn';
 
@@ -10,6 +10,14 @@ interface NewsFeedProps {
 }
 
 type FilterType = 'All' | 'Holdings' | 'Watchlist' | 'Macro';
+
+const FILTERS: FilterType[] = ['All', 'Holdings', 'Watchlist', 'Macro'];
+
+const CATEGORY_CONFIG: Record<string, { label: string; icon: React.ComponentType<any>; className: string }> = {
+  Holdings: { label: 'Holding', icon: Briefcase, className: 'text-primary bg-primary/15 border-primary/30' },
+  Watchlist: { label: 'Watch', icon: Eye, className: 'text-warning bg-warning/15 border-warning/30' },
+  Macro: { label: 'Macro', icon: Globe, className: 'text-muted-foreground bg-muted/60 border-border' },
+};
 
 function timeAgo(isoString: string): string {
   const diff = Date.now() - new Date(isoString).getTime();
@@ -26,29 +34,51 @@ export function NewsFeed({ news }: NewsFeedProps) {
   
   const filteredNews = filter === 'All' ? news : news.filter(n => n.category === filter);
 
+  const filterCounts: Record<FilterType, number> = {
+    All: news.length,
+    Holdings: news.filter(n => n.category === 'Holdings').length,
+    Watchlist: news.filter(n => n.category === 'Watchlist').length,
+    Macro: news.filter(n => n.category === 'Macro').length,
+  };
+
   return (
-    <div className="glass-card rounded-2xl border border-border/50 flex flex-col h-[600px]">
+    <div className="glass-card rounded-2xl border border-border/50 flex flex-col h-full">
       <div className="p-5 border-b border-border/50 shrink-0 space-y-4">
         <h2 className="text-lg font-bold flex items-center gap-2">
           <Newspaper className="h-5 w-5 text-primary" />
           Actionable Intelligence
         </h2>
         
-        <div className="flex overflow-x-auto pb-2 scroll-smooth" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
-          {['All', 'Holdings', 'Watchlist', 'Macro'].map((f) => (
-            <button
-              key={f}
-              onClick={() => setFilter(f as FilterType)}
-              className={cn(
-                'px-3.5 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-all border shrink-0 mr-2 last:mr-0 cursor-pointer',
-                filter === f 
-                  ? 'bg-primary text-primary-foreground border-primary shadow-md shadow-primary/20' 
-                  : 'bg-muted/30 text-muted-foreground border-border/50 hover:bg-muted/80 hover:text-foreground hover:border-border'
-              )}
-            >
-              {f}
-            </button>
-          ))}
+        {/* Filter Chips — high-contrast segmented control */}
+        <div className="flex gap-2 flex-wrap" role="tablist" aria-label="News filters">
+          {FILTERS.map((f) => {
+            const isActive = filter === f;
+            const count = filterCounts[f];
+            return (
+              <button
+                key={f}
+                onClick={() => setFilter(f)}
+                role="tab"
+                aria-selected={isActive}
+                className={cn(
+                  'inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-bold transition-all cursor-pointer whitespace-nowrap',
+                  isActive
+                    ? 'bg-primary text-primary-foreground border-2 border-primary shadow-lg shadow-primary/30'
+                    : 'bg-card text-muted-foreground border-2 border-border hover:bg-muted hover:text-foreground hover:border-foreground/20'
+                )}
+              >
+                {f}
+                <span className={cn(
+                  'text-[10px] font-black rounded-full min-w-[20px] h-[20px] inline-flex items-center justify-center leading-none',
+                  isActive
+                    ? 'bg-primary-foreground/25 text-primary-foreground'
+                    : 'bg-muted text-muted-foreground'
+                )}>
+                  {count}
+                </span>
+              </button>
+            );
+          })}
         </div>
       </div>
 
@@ -59,52 +89,71 @@ export function NewsFeed({ news }: NewsFeedProps) {
             <p className="text-sm font-semibold">No news found for this filter.</p>
           </div>
         ) : (
-          filteredNews.map((item) => (
-            <a 
-              key={item.id} 
-              href={item.url} 
-              target="_blank" 
-              rel="noopener noreferrer"
-              className="block p-4 rounded-xl border border-border/40 hover:border-border hover:bg-muted/30 transition-all group"
-            >
-              <div className="flex justify-between items-start mb-2 gap-3">
-                <h3 className="text-sm font-bold leading-snug group-hover:text-primary transition-colors line-clamp-2">
-                  {item.title}
-                </h3>
-                <span className={cn(
-                  'shrink-0 px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider',
-                  item.sentiment === 'Bullish' ? 'bg-success/10 text-success' :
-                  item.sentiment === 'Bearish' ? 'bg-danger/10 text-danger' :
-                  item.sentiment === 'Mixed' ? 'bg-warning/10 text-warning' :
-                  'bg-muted text-muted-foreground'
-                )}>
-                  {item.sentiment}
-                </span>
-              </div>
-              
-              <p className="text-xs text-muted-foreground line-clamp-2 mb-3">
-                {item.summary}
-              </p>
-              
-              <div className="flex items-center justify-between mt-auto pt-3 border-t border-border/30">
-                <div className="flex items-center gap-3">
-                  <span className="text-[10px] font-semibold text-foreground/80">{item.source}</span>
-                  <span className="text-[10px] text-muted-foreground flex items-center gap-1">
-                    <Clock className="h-3 w-3" /> {timeAgo(item.publishedAt)}
+          filteredNews.map((item) => {
+            const catCfg = CATEGORY_CONFIG[item.category];
+            const CatIcon = catCfg?.icon;
+            
+            return (
+              <a 
+                key={item.id} 
+                href={item.url} 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="block p-4 rounded-xl border border-border/40 hover:border-border hover:bg-muted/30 transition-all group"
+              >
+                {/* Meta row: category + time + sentiment */}
+                <div className="flex items-center justify-between mb-2 gap-2">
+                  <div className="flex items-center gap-2">
+                    {catCfg && (
+                      <span className={cn(
+                        'inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[9px] font-black uppercase tracking-widest border',
+                        catCfg.className
+                      )}>
+                        <CatIcon className="h-2.5 w-2.5" />
+                        {catCfg.label}
+                      </span>
+                    )}
+                    <span className="text-[10px] text-muted-foreground flex items-center gap-1">
+                      <Clock className="h-3 w-3" />
+                      {timeAgo(item.publishedAt)}
+                    </span>
+                  </div>
+                  <span className={cn(
+                    'shrink-0 px-2.5 py-1 rounded-md text-[9px] font-black uppercase tracking-widest border',
+                    item.sentiment === 'Bullish' ? 'bg-success/15 text-success border-success/30' :
+                    item.sentiment === 'Bearish' ? 'bg-danger/15 text-danger border-danger/30' :
+                    item.sentiment === 'Mixed' ? 'bg-warning/15 text-warning border-warning/30' :
+                    'bg-muted/50 text-muted-foreground border-border'
+                  )}>
+                    {item.sentiment}
                   </span>
                 </div>
+
+                {/* Title */}
+                <h3 className="text-sm font-bold leading-snug group-hover:text-primary transition-colors line-clamp-2 mb-1.5">
+                  {item.title}
+                </h3>
                 
-                <div className="flex items-center gap-1">
-                  {item.tickers.map(t => (
-                    <span key={t} className="text-[9px] font-mono font-semibold bg-background border border-border/60 px-1.5 py-0.5 rounded">
-                      {t}
-                    </span>
-                  ))}
-                  <ExternalLink className="h-3 w-3 text-muted-foreground ml-1 opacity-0 group-hover:opacity-100 transition-opacity" />
+                {/* Summary */}
+                <p className="text-xs text-muted-foreground line-clamp-2 mb-3 leading-relaxed">
+                  {item.summary}
+                </p>
+                
+                {/* Footer */}
+                <div className="flex items-center justify-between pt-2.5 border-t border-border/30">
+                  <span className="text-[10px] font-semibold text-foreground/70">{item.source}</span>
+                  <div className="flex items-center gap-1.5">
+                    {item.tickers.map(t => (
+                      <span key={t} className="text-[9px] font-mono font-bold bg-card border border-border px-1.5 py-0.5 rounded text-foreground/80">
+                        {t}
+                      </span>
+                    ))}
+                    <ExternalLink className="h-3 w-3 text-muted-foreground ml-0.5 opacity-0 group-hover:opacity-100 transition-opacity" />
+                  </div>
                 </div>
-              </div>
-            </a>
-          ))
+              </a>
+            );
+          })
         )}
       </div>
     </div>

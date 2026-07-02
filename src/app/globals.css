@@ -150,7 +150,7 @@ body {
 /* Tabular numbers for price updates to prevent layout shift */
 .font-tabular {
   font-family: var(--font-geist-mono);
-  font-variant-numeric: tabular-nums;
+  font-variant-numeric: tabular-nums lining-nums;
 }
 
 /* Custom Scrollbars */

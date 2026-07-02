@@ -213,8 +213,9 @@ export default function DashboardLayout({
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col min-w-0 relative">
         {/* Top Header */}
-        <header className="h-16 border-b border-border/50 bg-card/65 backdrop-blur-md flex items-center justify-between px-4 md:px-6 relative z-10 shrink-0">
-          <div className="flex items-center gap-3">
+        <header className="h-16 border-b border-border/50 bg-card/65 backdrop-blur-md flex items-center px-4 md:px-6 relative z-10 shrink-0">
+          {/* Left Group: Page title + market status + freshness */}
+          <div className="flex items-center gap-3 shrink-0">
             {/* Mobile Menu Toggler */}
             <button
               onClick={() => setMobileMenuOpen(true)}
@@ -242,17 +243,19 @@ export default function DashboardLayout({
             </div>
           </div>
 
-          {/* Search bar placeholder & Right actions */}
-          <div className="flex items-center gap-3">
-            {/* Command Palette Search Trigger */}
-            <button className="hidden sm:flex items-center gap-2 px-3 py-1.5 bg-background border border-border/60 hover:border-primary/40 rounded-xl text-xs text-muted-foreground hover:text-foreground transition-all w-52 md:w-64 cursor-pointer">
-              <Search className="h-3.5 w-3.5" />
-              <span>Search tickers, companies, news...</span>
-              <kbd className="ml-auto pointer-events-none inline-flex h-5 select-none items-center gap-0.5 rounded border border-border bg-muted px-1.5 font-mono text-[9px] font-medium text-muted-foreground">
+          {/* Center Group: Search bar */}
+          <div className="flex-1 flex justify-center px-4">
+            <button className="hidden sm:flex items-center gap-2 px-3 py-1.5 bg-background border border-border/60 hover:border-primary/40 rounded-xl text-xs text-muted-foreground hover:text-foreground transition-all w-full max-w-sm cursor-pointer">
+              <Search className="h-3.5 w-3.5 shrink-0" />
+              <span className="truncate">Search tickers, companies, news...</span>
+              <kbd className="ml-auto pointer-events-none inline-flex h-5 select-none items-center gap-0.5 rounded border border-border bg-muted px-1.5 font-mono text-[9px] font-medium text-muted-foreground shrink-0">
                 ⌘K
               </kbd>
             </button>
+          </div>
 
+          {/* Right Group: Account selector + theme toggle + profile */}
+          <div className="flex items-center gap-2 shrink-0">
             {/* Account Switcher */}
             <div className="relative hidden md:block">
               <button
@@ -287,6 +290,9 @@ export default function DashboardLayout({
                 </>
               )}
             </div>
+
+            {/* Separator */}
+            <div className="hidden md:block h-6 w-px bg-border/50" />
 
             {/* Theme Toggle */}
             <button
