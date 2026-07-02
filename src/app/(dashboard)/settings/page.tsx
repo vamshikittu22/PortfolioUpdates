@@ -15,7 +15,7 @@ const PROVIDERS: { id: AIProvider; name: string; description: string }[] = [
 ];
 
 export default function SettingsPage() {
-  const { settings, isLoaded, updateSettings, updateKey } = useSettings();
+  const { settings, serverKeys, isLoaded, updateSettings, updateKey } = useSettings();
 
   if (!isLoaded) {
     return <div className="p-8 text-muted-foreground">Loading settings...</div>;
@@ -94,13 +94,13 @@ export default function SettingsPage() {
                 <div key={p.id} className="space-y-1.5">
                   <label className="text-sm font-semibold flex items-center justify-between">
                     <span>{p.name} API Key</span>
-                    {settings.keys[p.id] && <span className="text-[10px] text-success font-bold uppercase">Configured</span>}
+                    {(settings.keys[p.id] || serverKeys[p.id]) && <span className="text-[10px] text-success font-bold uppercase">Configured</span>}
                   </label>
                   <input
                     type="password"
                     value={settings.keys[p.id]}
                     onChange={(e) => updateKey(p.id, e.target.value)}
-                    placeholder={`sk-...`}
+                    placeholder={serverKeys[p.id] ? "Configured on Server (.env.local)" : "sk-..."}
                     className="w-full px-4 py-2.5 bg-background/60 border border-border/60 focus:border-primary rounded-xl text-sm outline-none transition-all placeholder:text-muted-foreground/40 font-mono"
                   />
                 </div>

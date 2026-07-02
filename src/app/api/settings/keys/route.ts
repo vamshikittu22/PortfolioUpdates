@@ -2,6 +2,17 @@ import { NextResponse } from 'next/server';
 import fs from 'fs';
 import path from 'path';
 
+export async function GET() {
+  return NextResponse.json({
+    gemini: !!process.env.GEMINI_API_KEY && process.env.GEMINI_API_KEY !== 'your-gemini-api-key',
+    openai: !!process.env.OPENAI_API_KEY && process.env.OPENAI_API_KEY !== 'your-openai-api-key',
+    claude: !!process.env.CLAUDE_API_KEY && process.env.CLAUDE_API_KEY !== 'your-claude-api-key',
+    openrouter: !!process.env.OPENROUTER_API_KEY && process.env.OPENROUTER_API_KEY !== 'your-openrouter-api-key',
+    nvidia: !!process.env.NVIDIA_API_KEY && process.env.NVIDIA_API_KEY !== 'your-nvidia-api-key',
+    huggingface: !!process.env.HUGGINGFACE_API_KEY && process.env.HUGGINGFACE_API_KEY !== 'your-huggingface-api-key',
+  });
+}
+
 export async function POST(request: Request) {
   try {
     const { provider, key } = await request.json();

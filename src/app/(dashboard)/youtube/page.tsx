@@ -17,6 +17,7 @@ import {
 import { groupByWeek, type LiveVideo } from '@/lib/youtube-types';
 import { VideoAnalysisModal } from '@/components/youtube/VideoAnalysisModal';
 import { useSettings } from '@/hooks/use-settings';
+import { useChannels } from '@/hooks/use-channels';
 
 type FilterTab = 'all' | 'portfolio' | 'bullish' | 'bearish';
 type TimeFilter = '7d' | '30d' | 'all';
@@ -52,7 +53,7 @@ type ToastType = 'success' | 'error' | 'info';
 interface Toast { type: ToastType; message: string; detail?: string }
 
 export default function YouTubePage() {
-  const [channels, setChannels] = useState<YTChannel[]>(MOCK_CHANNELS);
+  const { channels, setChannels } = useChannels();
   const [selectedChannelId, setSelectedChannelId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<FilterTab>('all');
   const [timeFilter, setTimeFilter] = useState<TimeFilter>('30d');
@@ -69,15 +70,19 @@ export default function YouTubePage() {
   
   const [activeModalVideoId, setActiveModalVideoId] = useState<string | null>(null);
   
-  const { settings } = useSettings();
+  const { settings, serverKeys } = useSettings();
 
   useEffect(() => {
     const missing: string[] = [];
-    if (!settings.keys[settings.preferredProvider]) {
-      missing.push(settings.preferredProvider.toUpperCase());
+    const provider = settings.preferredProvider;
+    const hasClientKey = !!settings.keys[provider];
+    const hasServerKey = !!serverKeys[provider];
+
+    if (!hasClientKey && !hasServerKey) {
+      missing.push(provider.toUpperCase());
     }
     setMissingKeys(missing);
-  }, [settings.preferredProvider, settings.keys]);
+  }, [settings.preferredProvider, settings.keys, serverKeys]);
 
   const showToast = useCallback((t: Toast) => {
     setToast(t);

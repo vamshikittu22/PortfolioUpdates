@@ -27,8 +27,16 @@ export async function POST(request: Request) {
     const canUseAI = !!ai_api_key || hasGeminiKey;
 
     if (canUseAI) {
-      const isTitleOnly = !transcriptResult.available || transcriptResult.word_count < 100;
-      const analysis = await analyzeTranscriptWithProvider(ai_provider, ai_api_key, analysisText, title, channel_name || '', isTitleOnly);
+      // Use char_count for non-Latin scripts (Telugu/Hindi don't split on spaces the same way)
+      // A transcript with 200+ chars or 50+ segments is substantial enough for analysis
+      const isSubstantial = transcriptResult.available && (
+        transcriptResult.char_count >= 200 || transcriptResult.segment_count >= 30
+      );
+      const isTitleOnly = !isSubstantial;
+      const analysis = await analyzeTranscriptWithProvider(
+        ai_provider, ai_api_key, analysisText, title, channel_name || '', isTitleOnly,
+        transcriptResult.detected_lang || 'en'
+      );
       const affectsPortfolio = crossReferenceHoldings(analysis.mentioned_tickers, holdings);
       
       return NextResponse.json({

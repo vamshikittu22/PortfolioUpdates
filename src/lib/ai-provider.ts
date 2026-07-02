@@ -1,5 +1,6 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import type { VideoAnalysis } from './gemini';
+import { getLanguageName } from './transcript';
 
 const KNOWN_TICKERS_HINT = `
 Common Indian stocks: RELIANCE, TCS, INFY, WIPRO, HCLTECH, HDFC, HDFCBANK, ICICIBANK, SBIN, 
@@ -13,7 +14,13 @@ V, MA, NFLX, AMD, INTC, QCOM, SBUX, DIS, BA, GS, MS
 Common crypto: BTC, ETH, SOL, BNB, XRP, ADA, DOGE, MATIC, LINK, DOT, AVAX, ATOM, LTC
 `.trim();
 
-function buildPrompt(transcript: string, videoTitle: string, channelName: string, isTitleOnly: boolean) {
+function buildPrompt(transcript: string, videoTitle: string, channelName: string, isTitleOnly: boolean, detectedLang = 'en') {
+  const langName = getLanguageName(detectedLang);
+  const isNonEnglish = detectedLang !== 'en';
+  const langContext = isNonEnglish
+    ? `\n\nCRITICAL LANGUAGE NOTE: The transcript is in ${langName} (language code: ${detectedLang}). The text may be in ${langName} script or transliterated Latin script. You MUST:\n- Read and understand the ${langName} content fully\n- Translate ALL output values (summary_bullets, key_themes) into clear English\n- Correctly identify stock tickers, company names, and financial terms even when spoken/written in ${langName}\n- Match spoken company names to their NSE/BSE ticker symbols (e.g., "రిలయన్స్" or "रिलायंस" → RELIANCE)`
+    : '';
+
   if (isTitleOnly) {
     return `You are a financial intelligence analyst. A YouTube video titled "${videoTitle}" from "${channelName}" has no transcript available.
 Analyze the TITLE to extract likely financial topics, sentiments, and mentioned tickers/assets.
@@ -38,7 +45,7 @@ RULES:
 - bearish_on: tickers where the title implies a NEGATIVE, cautious, or falling outlook.
 - key_themes: 1-2 macro themes.
 - confidence: MUST be "low" since this is based only on a title.
-- multilingual: The title may be in Hindi, Telugu, English, or mixed dialects (Hinglish/Telglish). Automatically translate all summary_bullets and key_themes to English.
+- multilingual: The title may be in Hindi, Telugu, English, or mixed dialects (Hinglish/Telglish). Automatically translate all summary_bullets and key_themes to English.${langContext}
 
 KNOWN TICKERS FOR REFERENCE (match to these when possible):
 ${KNOWN_TICKERS_HINT}
@@ -69,7 +76,7 @@ RULES:
 - bearish_on: tickers where the speaker/video has a NEGATIVE or cautious outlook
 - key_themes: 2-3 macro themes (e.g., "Rate cuts", "AI adoption", "FII flows")
 - confidence: "high" if transcript is clear and financial, "medium" if partial, "low" if off-topic
-- multilingual: The transcript may contain Hindi, Telugu, English, or mixed dialects (Hinglish/Telglish) written in native script (Devnagari, Telugu) or Latin script. Automatically translate all output values (summary_bullets, key_themes) into English, and resolve tickers correctly.
+- multilingual: The transcript may contain Hindi, Telugu, English, or mixed dialects (Hinglish/Telglish) written in native script (Devnagari, Telugu) or Latin script. Automatically translate all output values (summary_bullets, key_themes) into English, and resolve tickers correctly.${langContext}
 
 KNOWN TICKERS FOR REFERENCE:
 ${KNOWN_TICKERS_HINT}
@@ -145,9 +152,10 @@ export async function analyzeTranscriptWithProvider(
   transcript: string,
   videoTitle: string,
   channelName: string,
-  isTitleOnly = false
+  isTitleOnly = false,
+  detectedLang = 'en'
 ): Promise<VideoAnalysis> {
-  const prompt = buildPrompt(transcript, videoTitle, channelName, isTitleOnly);
+  const prompt = buildPrompt(transcript, videoTitle, channelName, isTitleOnly, detectedLang);
 
   try {
     let resultText = '';

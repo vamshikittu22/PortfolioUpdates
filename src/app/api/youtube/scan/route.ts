@@ -155,9 +155,14 @@ export async function POST(request: Request) {
 
         let scannedVideo: ScannedVideo;
 
-        if (hasGeminiKey && transcriptResult.available && transcriptResult.word_count >= 100) {
-          // Full Gemini AI analysis
-          const analysis = await analyzeTranscript(analysisText, video.title, ch.channel_name);
+        if (hasGeminiKey && transcriptResult.available && (
+          transcriptResult.char_count >= 200 || transcriptResult.segment_count >= 30
+        )) {
+          // Full Gemini AI analysis (supports multilingual transcripts)
+          const analysis = await analyzeTranscript(
+            analysisText, video.title, ch.channel_name, false,
+            transcriptResult.detected_lang || 'en'
+          );
           const affectsPortfolio = crossReferenceHoldings(analysis.mentioned_tickers, holdings);
           scannedVideo = {
             video_id: video.video_id,

@@ -1,8 +1,9 @@
 // Gemini Flash AI analyzer for YouTube video transcripts
 // Extracts: summary bullets, bullish tickers, bearish tickers, mentioned tickers
-// Model: gemini-1.5-flash (free tier: 15 req/min, 1M tokens/day)
+// Model: gemini-2.5-flash (free tier: 15 req/min, 1M tokens/day)
 
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import { getLanguageName } from './transcript';
 
 export interface VideoAnalysis {
   summary_bullets: string[];       // 3-5 concise insight bullets
@@ -41,10 +42,17 @@ export async function analyzeTranscript(
   transcript: string,
   videoTitle: string,
   channelName: string,
-  isTitleOnly: boolean = false
+  isTitleOnly: boolean = false,
+  detectedLang: string = 'en'
 ): Promise<VideoAnalysis> {
   const genAI = getGemini();
   const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
+
+  const langName = getLanguageName(detectedLang);
+  const isNonEnglish = detectedLang !== 'en';
+  const langContext = isNonEnglish
+    ? `\n\nCRITICAL LANGUAGE NOTE: The transcript is in ${langName} (language code: ${detectedLang}). The text may be in ${langName} script or transliterated Latin script. You MUST:\n- Read and understand the ${langName} content fully\n- Translate ALL output values (summary_bullets, key_themes) into clear English\n- Correctly identify stock tickers, company names, and financial terms even when spoken/written in ${langName}\n- Match spoken company names to their NSE/BSE ticker symbols (e.g., "రిలయన్స్" or "रिलायंस" → RELIANCE)`
+    : '';
 
   const prompt = isTitleOnly
     ? `
@@ -71,6 +79,7 @@ RULES:
 - bearish_on: tickers where the title implies a NEGATIVE, cautious, or falling outlook.
 - key_themes: 1-2 macro themes.
 - confidence: MUST be "low" since this is based only on a title.
+- multilingual: The title may be in Hindi, Telugu, English, or mixed dialects. Automatically translate all summary_bullets and key_themes to English.${langContext}
 
 KNOWN TICKERS FOR REFERENCE (match to these when possible):
 ${KNOWN_TICKERS_HINT}
@@ -101,6 +110,7 @@ RULES:
 - bearish_on: tickers where the speaker/video has a NEGATIVE or cautious outlook
 - key_themes: 2-3 macro themes (e.g., "Rate cuts", "AI adoption", "FII flows")
 - confidence: "high" if transcript is clear and financial, "medium" if partial, "low" if off-topic
+- multilingual: The transcript may contain Hindi, Telugu, English, or mixed dialects written in native script or Latin script. Translate all output to English and resolve tickers correctly.${langContext}
 
 KNOWN TICKERS FOR REFERENCE (match to these when possible):
 ${KNOWN_TICKERS_HINT}

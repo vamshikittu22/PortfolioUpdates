@@ -31,6 +31,7 @@ const DEFAULT_SETTINGS: AppSettings = {
 export function useSettings() {
   const [settings, setSettingsState] = useState<AppSettings>(DEFAULT_SETTINGS);
   const [isLoaded, setIsLoaded] = useState(false);
+  const [serverKeys, setServerKeys] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     try {
@@ -41,7 +42,13 @@ export function useSettings() {
     } catch (e) {
       console.error('Failed to load settings from local storage', e);
     }
-    setIsLoaded(true);
+
+    // Fetch server keys configuration
+    fetch('/api/settings/keys')
+      .then((res) => res.json())
+      .then((data) => setServerKeys(data))
+      .catch((err) => console.error('Failed to fetch server keys', err))
+      .finally(() => setIsLoaded(true));
   }, []);
 
   const updateSettings = (newSettings: Partial<AppSettings>) => {
@@ -74,6 +81,9 @@ export function useSettings() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ provider, key }),
       });
+      
+      // Update local serverKeys state since we updated the server
+      setServerKeys(prev => ({ ...prev, [provider]: !!key }));
     } catch (e) {
       console.error('Failed to sync key to server', e);
     }
@@ -81,6 +91,7 @@ export function useSettings() {
 
   return {
     settings,
+    serverKeys,
     isLoaded,
     updateSettings,
     updateKey,
