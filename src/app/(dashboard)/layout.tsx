@@ -18,12 +18,14 @@ import {
   Menu,
   X,
   Search,
+  SearchCode,
   ChevronLeft,
   ChevronRight,
   TrendingUp,
   User,
   ChevronDown,
-  Check
+  Check,
+  MoreHorizontal
 } from 'lucide-react';
 
 const Youtube = (props: React.SVGProps<SVGSVGElement>) => (
@@ -52,10 +54,15 @@ const navigationItems: SidebarItem[] = [
   { name: 'Dashboard', href: '/', icon: LayoutDashboard },
   { name: 'Holdings', href: '/holdings', icon: Briefcase },
   { name: 'News', href: '/news', icon: Newspaper },
+  { name: 'Research', href: '/research', icon: SearchCode },
   { name: 'YouTube Intel', href: '/youtube', icon: Youtube },
   { name: 'Alerts', href: '/alerts', icon: Bell, badge: 3 },
   { name: 'Settings', href: '/settings', icon: Settings },
 ];
+
+// Mobile bottom nav: first 4 items are primary tabs, rest go into "More"
+const MOBILE_PRIMARY_NAV = navigationItems.slice(0, 4);
+const MOBILE_MORE_NAV = navigationItems.slice(4);
 
 export default function DashboardLayout({
   children,
@@ -71,6 +78,7 @@ export default function DashboardLayout({
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
   const [accountDropdownOpen, setAccountDropdownOpen] = useState(false);
+  const [mobileMoreOpen, setMobileMoreOpen] = useState(false);
 
   const { accounts, selectedAccountId, switchAccount } = usePortfolioStore();
   const selectedAccount = selectedAccountId ? accounts[selectedAccountId] : null;
@@ -355,7 +363,7 @@ export default function DashboardLayout({
 
         {/* Mobile Bottom Tab Bar (Width < 768px) */}
         <nav className="md:hidden fixed bottom-0 left-0 right-0 h-16 bg-card/90 backdrop-blur-lg border-t border-border/50 flex items-center justify-around z-20 px-2">
-          {navigationItems.slice(0, 5).map((item) => {
+          {MOBILE_PRIMARY_NAV.map((item) => {
             const isActive = pathname === item.href;
             const Icon = item.icon;
             return (
@@ -376,17 +384,60 @@ export default function DashboardLayout({
               </Link>
             );
           })}
-          <Link
-            href="/settings"
-            className={`flex flex-col items-center justify-center flex-1 py-1 text-center cursor-pointer transition-colors ${
-              pathname === '/settings' ? 'text-primary' : 'text-muted-foreground hover:text-foreground'
-            }`}
-          >
-            <Settings className="h-5 w-5" />
-            <span className="text-[10px] mt-1 font-medium scale-90 truncate max-w-full">
-              Settings
-            </span>
-          </Link>
+
+          {/* More menu */}
+          <div className="relative flex flex-col items-center justify-center flex-1 py-1">
+            <button
+              onClick={() => setMobileMoreOpen(!mobileMoreOpen)}
+              className={`flex flex-col items-center justify-center cursor-pointer transition-colors relative ${
+                MOBILE_MORE_NAV.some(i => pathname === i.href) || mobileMoreOpen
+                  ? 'text-primary'
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              <MoreHorizontal className="h-5 w-5" />
+              <span className="text-[10px] mt-1 font-medium scale-90">More</span>
+              {/* Badge dot if any More-menu item has a badge */}
+              {MOBILE_MORE_NAV.some(i => i.badge) && (
+                <span className="absolute top-1 right-0 h-2 w-2 rounded-full bg-danger border border-card" />
+              )}
+            </button>
+
+            {mobileMoreOpen && (
+              <>
+                <div
+                  className="fixed inset-0 z-30"
+                  onClick={() => setMobileMoreOpen(false)}
+                />
+                <div className="absolute bottom-full mb-2 right-0 w-48 bg-card border border-border/80 rounded-xl shadow-lg py-1.5 z-40 animate-in fade-in slide-in-from-bottom-2">
+                  {MOBILE_MORE_NAV.map((item) => {
+                    const isActive = pathname === item.href;
+                    const Icon = item.icon;
+                    return (
+                      <Link
+                        key={item.name}
+                        href={item.href}
+                        onClick={() => setMobileMoreOpen(false)}
+                        className={`flex items-center gap-3 px-4 py-2.5 text-sm font-medium transition-colors cursor-pointer ${
+                          isActive
+                            ? 'text-primary bg-primary/10'
+                            : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
+                        }`}
+                      >
+                        <Icon className="h-4.5 w-4.5" />
+                        <span>{item.name}</span>
+                        {item.badge && (
+                          <span className="ml-auto bg-danger text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">
+                            {item.badge}
+                          </span>
+                        )}
+                      </Link>
+                    );
+                  })}
+                </div>
+              </>
+            )}
+          </div>
         </nav>
       </div>
 

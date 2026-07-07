@@ -13,6 +13,7 @@ export interface Holding {
   currentPrice: number;
   dayChange: number; // Percentage
   totalChange: number; // Percentage
+  currency?: string;
 }
 
 export interface WatchlistItem {

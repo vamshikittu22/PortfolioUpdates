@@ -43,7 +43,7 @@ export function AllocationChart({ data }: AllocationChartProps) {
                 color: '#f8fafc'
               }}
               itemStyle={{ color: '#f8fafc' }}
-              formatter={(value: number) => [`${value}%`, 'Allocation']}
+              formatter={(value: any) => [`${value}%`, 'Allocation']}
             />
             <Legend 
               verticalAlign="bottom" 
