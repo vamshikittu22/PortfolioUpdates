@@ -70,6 +70,7 @@ The user opens the app (or gets a Telegram message) and immediately knows what's
 | CSV import over broker API sync | Groww and Robinhood have no free public APIs; CSV export is universal and free | — Pending |
 | Telegram over WhatsApp for notifications | Free bot API, no approval process; WhatsApp needs Meta Business API | — Pending |
 | Supabase for persistence + auth | Already installed and scaffolded in codebase; free tier; RLS gives per-user isolation for later multi-user | — Pending |
+| Supabase as single source of truth, run locally in dev | Local Postgres/Supabase CLI gives fast offline dev; identical schema/RLS deploys to prod. Avoids building a custom local↔cloud sync engine, which would delay core features and add conflict-resolution complexity for no single-user payoff. Always-on host is required anyway for background news refresh + Telegram digest/alerts. | — Pending |
 | Free data sources only (Yahoo Finance etc.) | Personal project, no budget; 2–4h freshness acceptable with on-demand live refresh | — Pending |
 | Keep research + YouTube modules | Most built-out features; complement the news core value | — Pending |
 
