@@ -107,24 +107,56 @@ Explicitly excluded. Documented to prevent scope creep.
 
 ## Traceability
 
-Which phases cover which requirements. Populated during roadmap creation.
+Which phases cover which requirements. Populated during roadmap creation (see ROADMAP.md).
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| AUTH-01 → AUTH-06 | TBD | Pending |
-| PORT-01 → PORT-07 | TBD | Pending |
-| PRICE-01 → PRICE-07 | TBD | Pending |
-| IMPT-01 → IMPT-05 | TBD | Pending |
-| NEWS-01 → NEWS-05 | TBD | Pending |
-| ALRT-01 → ALRT-05 | TBD | Pending |
-| DGST-01 → DGST-02 | TBD | Pending |
-| WIRE-01 → WIRE-02 | TBD | Pending |
+| AUTH-01 | Phase 1 | Pending |
+| AUTH-02 | Phase 1 | Pending |
+| AUTH-03 | Phase 1 | Pending |
+| AUTH-04 | Phase 1 | Pending |
+| AUTH-05 | Phase 1 | Pending |
+| AUTH-06 | Phase 1 | Pending |
+| PORT-01 | Phase 2 | Pending |
+| PORT-02 | Phase 2 | Pending |
+| PORT-03 | Phase 2 | Pending |
+| PORT-04 | Phase 2 | Pending |
+| PORT-05 | Phase 2 | Pending |
+| PORT-06 | Phase 2 | Pending |
+| PORT-07 | Phase 2 | Pending |
+| WIRE-01 | Phase 2 | Pending |
+| WIRE-02 | Phase 2 | Pending |
+| PRICE-01 | Phase 3 | Pending |
+| PRICE-02 | Phase 3 | Pending |
+| PRICE-03 | Phase 3 | Pending |
+| PRICE-04 | Phase 3 | Pending |
+| PRICE-05 | Phase 3 | Pending |
+| PRICE-06 | Phase 3 | Pending |
+| PRICE-07 | Phase 3 | Pending |
+| IMPT-01 | Phase 4 | Pending |
+| IMPT-02 | Phase 4 | Pending |
+| IMPT-03 | Phase 4 | Pending |
+| IMPT-04 | Phase 4 | Pending |
+| IMPT-05 | Phase 4 | Pending |
+| ALRT-01 | Phase 5 | Pending |
+| ALRT-02 | Phase 5 | Pending |
+| ALRT-03 | Phase 5 | Pending |
+| ALRT-05 | Phase 5 | Pending |
+| NEWS-01 | Phase 6 | Pending |
+| NEWS-02 | Phase 6 | Pending |
+| NEWS-03 | Phase 6 | Pending |
+| NEWS-04 | Phase 6 | Pending |
+| NEWS-05 | Phase 6 | Pending |
+| ALRT-04 | Phase 6 | Pending |
+| DGST-01 | Phase 7 | Pending |
+| DGST-02 | Phase 7 | Pending |
 
 **Coverage:**
-- v1 requirements: 36 total
-- Mapped to phases: 0 (set during roadmap)
-- Unmapped: 36 ⚠️ (resolved by roadmapper)
+
+- v1 requirements: 39 total (note: the enumerated IDs total 39; the earlier "36" was a miscount)
+- Mapped to phases: 39 ✓
+- Unmapped: 0 ✓
 
 ---
 *Requirements defined: 2026-07-13*
-*Last updated: 2026-07-13 after initial definition*
+*Last updated: 2026-07-13 — traceability populated during roadmap creation*
