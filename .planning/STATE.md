@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-07-13)
 ## Current Position
 
 Phase: 2 of 7 (Schema, Persistence & Hydration)
-Plan: 2 of 7 in current phase complete — 02-01 and 02-03 CODE-COMPLETE (SUMMARYs written); 02-02 (parallel wave 1, independent) still pending
-Status: CODE-COMPLETE, VERIFICATION DEFERRED — CODE-ONLY mode (no Docker, no live Supabase), carried forward from Phase 1. Plans 02-01/02-03 not runtime-verified; runtime gate is blocked on a live DB.
-Last activity: 2026-07-14 — 02-03 (WIRE-02: useChannels() migrated from localStorage to Supabase yt_channels, async add/toggle/remove API, YouTubePage wired with toast error surfacing) authored, statically verified (tsc clean, grep checks pass), and committed.
+Plan: 3 of 7 in current phase complete — 02-01, 02-02, 02-03 CODE-COMPLETE (SUMMARYs written); wave 1 (independent plans) now done
+Status: CODE-COMPLETE, VERIFICATION DEFERRED — CODE-ONLY mode (no Docker, no live Supabase), carried forward from Phase 1. 02-02's own verification (npm run test:derive-holdings) is NOT deferred — it is a pure function with zero DB dependency and was actually run: PASS. Plans 02-01/02-03 remain runtime-unverified pending a live DB.
+Last activity: 2026-07-14 — 02-02 (PORT-04/PORT-05: deriveHoldings weighted-average-cost aggregation for BUY/SELL/SPLIT/BONUS, src/lib/types.ts shared domain types) built via TDD, `npm run test:derive-holdings` actually run and passing (7/7 assertions), tsc clean, committed.
 
-Progress: [██▓░░░░] 29% (2/7 plans) code authored / 0% runtime-verified
+Progress: [███░░░░] 43% (3/7 plans) code authored / partial runtime-verified (02-02's pure-logic test genuinely passing; DB-dependent plans still deferred)
 
 ### DEFERRED verification debt (must clear before Phase 1 and 2 truly pass)
 Requires a live Supabase (Docker `npx supabase start` OR a hosted project), then:
@@ -54,6 +54,7 @@ Resume: re-run `/gsd:execute-phase 2` (all SUMMARYs present through 02-01/02-03 
 | 01-01 | 17 min | 3 | 6 |
 | Phase 02 P01 | 12min | 3 tasks | 3 files |
 | Phase 02 P03 | 12min | 2 tasks | 2 files |
+| Phase 02 P02 | 15min | 1 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -86,5 +87,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-07-14
-Stopped at: Completed 02-03-PLAN.md in CODE-ONLY / DEFER-VERIFICATION mode (WIRE-02: useChannels() rewritten against Supabase yt_channels with async add/toggle/remove, no localStorage/mock fallback; YouTubePage wired to new API). Independent of 02-01/02-02 (transactions/instruments schema work). Ready for 02-02 or 02-04.
+Stopped at: Completed 02-02-PLAN.md (TDD: deriveHoldings + src/lib/types.ts, test:derive-holdings genuinely green — no DB needed). Wave 1 (02-01, 02-02, 02-03 — all independent, no depends_on) now fully code-complete. Ready for 02-04 (data layer, depends on 02-01/02-02).
 Resume file: None
