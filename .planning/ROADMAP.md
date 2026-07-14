@@ -67,7 +67,13 @@ Decimal phases appear between their surrounding integers in numeric order.
   3. A failed price fetch shows a stale-with-warning badge and never a fabricated value.
   4. Per-holding and total P&L display day-change and total-change, stored in native currency with the combined total converted at a cached FX rate whose effect is visible.
   5. A >40% overnight price move is flagged as a possible corporate action rather than shown as a large gain/loss.
-**Plans**: TBD
+**Plans**: 6 plans
+- [ ] 03-01-PLAN.md — fx_cache + price_cache schema (instrument_id key, nullable price/source, fetch_error, corporate_action_flag) + pg_cron/pg_net scheduling migration
+- [ ] 03-02-PLAN.md — TDD: pure logic (Yahoo response parsing, corporate-action heuristic, refresh dedup, refresh-secret guard, FX conversion, per-holding/portfolio P&L math)
+- [ ] 03-03-PLAN.md — Network wrappers: fetchPrices (Yahoo Finance) + fetchFXRate (ExchangeRate Host), honest failure handling
+- [ ] 03-04-PLAN.md — refresh-service orchestration + secret-guarded /api/prices/refresh route + on-demand refreshPricesNow Server Action
+- [ ] 03-05-PLAN.md — Dashboard/Holdings UI: real prices, P&L, staleness badges, FX-visible totals, corporate-action flags, refresh button
+- [ ] 03-06-PLAN.md — Live checkpoint: schedule + on-demand refresh + staleness behavior verified against a real DB/deployment
 
 ### Phase 4: CSV Import
 **Goal**: Users load real holdings from Groww and Robinhood exports safely, previewably, and idempotently.
@@ -121,7 +127,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
 |-------|----------------|--------|-----------|
 | 1. Auth + RLS Foundation | 0/4 | Not started | - |
 | 2. Schema + Persistence + Hydration | 0/TBD | Not started | - |
-| 3. Price Pipeline + P&L + Scheduling | 0/TBD | Not started | - |
+| 3. Price Pipeline + P&L + Scheduling | 0/6 | Not started | - |
 | 4. CSV Import | 0/TBD | Not started | - |
 | 5. Alerts + Telegram | 0/TBD | Not started | - |
 | 6. News Pipeline + Summarization | 0/TBD | Not started | - |
