@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-07-13)
 ## Current Position
 
 Phase: 2 of 7 (Schema, Persistence & Hydration)
-Plan: 1 of 7 in current phase — 02-01 CODE-COMPLETE (SUMMARY written)
-Status: CODE-COMPLETE, VERIFICATION DEFERRED — CODE-ONLY mode (no Docker, no live Supabase), carried forward from Phase 1. Plan 02-01 not runtime-verified; runtime gate is blocked on a live DB.
-Last activity: 2026-07-14 — 02-01 (instruments + transactions ledger migration, watchlist re-key + holdings drop, seed data) authored, statically verified, and committed.
+Plan: 2 of 7 in current phase complete — 02-01 and 02-03 CODE-COMPLETE (SUMMARYs written); 02-02 (parallel wave 1, independent) still pending
+Status: CODE-COMPLETE, VERIFICATION DEFERRED — CODE-ONLY mode (no Docker, no live Supabase), carried forward from Phase 1. Plans 02-01/02-03 not runtime-verified; runtime gate is blocked on a live DB.
+Last activity: 2026-07-14 — 02-03 (WIRE-02: useChannels() migrated from localStorage to Supabase yt_channels, async add/toggle/remove API, YouTubePage wired with toast error surfacing) authored, statically verified (tsc clean, grep checks pass), and committed.
 
-Progress: [█▓░░░░░] 14% (1/7 plans) code authored / 0% runtime-verified
+Progress: [██▓░░░░] 29% (2/7 plans) code authored / 0% runtime-verified
 
 ### DEFERRED verification debt (must clear before Phase 1 and 2 truly pass)
 Requires a live Supabase (Docker `npx supabase start` OR a hosted project), then:
@@ -24,8 +24,9 @@ Requires a live Supabase (Docker `npx supabase start` OR a hosted project), then
 4. `npx supabase db lint --level warning` → clean on shared tables (Security Advisor).
 5. Browser E2E (plan 01-04 Task 2): sign up → dashboard, logout → /login, login → real email, refresh persists, forged sb-cookie bounces to /login, `curl /api/settings/keys` unauth → 401.
 6. Confirm the 16 seed instrument rows insert cleanly and `(isin, exchange)` UNIQUE constraint holds (02-01).
+7. Confirm YouTube channel add/toggle/remove persist against real `yt_channels` rows, survive refresh, and are RLS-isolated per user (02-03).
 
-Resume: re-run `/gsd:execute-phase 2` (all SUMMARYs present through 02-01 → continues at 02-02) once a DB exists, OR run `/gsd:verify-work 1` / `/gsd:verify-work 2` after manual testing.
+Resume: re-run `/gsd:execute-phase 2` (all SUMMARYs present through 02-01/02-03 → continues at 02-02/02-04) once a DB exists, OR run `/gsd:verify-work 1` / `/gsd:verify-work 2` after manual testing.
 
 ## Performance Metrics
 
@@ -52,6 +53,7 @@ Resume: re-run `/gsd:execute-phase 2` (all SUMMARYs present through 02-01 → co
 |------|----------|-------|-------|
 | 01-01 | 17 min | 3 | 6 |
 | Phase 02 P01 | 12min | 3 tasks | 3 files |
+| Phase 02 P03 | 12min | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -84,5 +86,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-07-14
-Stopped at: Completed 02-01-PLAN.md in CODE-ONLY / DEFER-VERIFICATION mode (instruments + transactions ledger migration, watchlist_items re-key, holdings drop, 16-row instrument seed incl. NSE/NYSE dual listing). Ready for 02-02.
+Stopped at: Completed 02-03-PLAN.md in CODE-ONLY / DEFER-VERIFICATION mode (WIRE-02: useChannels() rewritten against Supabase yt_channels with async add/toggle/remove, no localStorage/mock fallback; YouTubePage wired to new API). Independent of 02-01/02-02 (transactions/instruments schema work). Ready for 02-02 or 02-04.
 Resume file: None
