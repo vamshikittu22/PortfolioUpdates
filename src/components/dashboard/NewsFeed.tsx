@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { Newspaper, Clock, ExternalLink, Briefcase, Eye, Globe } from 'lucide-react';
-import type { NewsItem } from '@/lib/mock-portfolio';
+import type { NewsItem } from '@/lib/types';
 import { cn } from '@/utils/cn';
 
 interface NewsFeedProps {

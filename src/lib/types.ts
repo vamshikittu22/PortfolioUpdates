@@ -1,8 +1,8 @@
 // Shared domain types for Phase 2+ (schema, persistence, hydration) and beyond.
 //
-// This file replaces the type exports currently living in `src/lib/mock-portfolio.ts`.
-// `mock-portfolio.ts` is NOT deleted here — other files still import from it until they
-// migrate in a later plan (02-04 and beyond).
+// This file replaces the type exports that previously lived in the mock
+// portfolio store module (deleted in plan 02-06, PORT-07). All UI now
+// imports NewsItem/AlertItem/WatchlistItem/etc. from here.
 
 export type Exchange = 'NSE' | 'BSE' | 'NASDAQ' | 'NYSE' | 'OTHER';
 export type Currency = 'INR' | 'USD';
@@ -63,8 +63,8 @@ export interface WatchlistItem {
   insight?: string;
 }
 
-// Unchanged shape from mock-portfolio.ts — still used by News/Alerts UI which
-// stay on empty real state until Phase 5/6 land.
+// Used by News/Alerts UI, which pass an honest empty array until Phase 5/6
+// (ALRT-*/NEWS-*) land a real source for this shape.
 export interface NewsItem {
   id: string;
   title: string;

@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { Bell, Activity, Newspaper, TrendingUp, TrendingDown, ArrowUpRight, Smartphone, Mail, AlertTriangle } from 'lucide-react';
-import type { AlertItem } from '@/lib/mock-portfolio';
+import type { AlertItem } from '@/lib/types';
 import { cn } from '@/utils/cn';
 
 interface AlertsTableProps {
