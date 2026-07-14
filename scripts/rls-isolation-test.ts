@@ -27,12 +27,15 @@
  * fix the migration instead.
  */
 import { readFileSync } from 'node:fs'
+import { join } from 'node:path'
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 
 // --- Load env from .env.local (inline parse so `npm run test:rls` works on any Node) ---
 function loadEnvLocal(): void {
   try {
-    const raw = readFileSync(new URL('../.env.local', import.meta.url), 'utf8')
+    // Resolved from the project root (where `npm run test:rls` runs), not import.meta —
+    // keeps this type-clean under the project's non-ESM tsconfig.
+    const raw = readFileSync(join(process.cwd(), '.env.local'), 'utf8')
     for (const line of raw.split(/\r?\n/)) {
       const trimmed = line.trim()
       if (!trimmed || trimmed.startsWith('#')) continue
