@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useState, useTransition } from 'react';
-import { Eye, MessageSquare, Plus, X } from 'lucide-react';
+import Link from 'next/link';
+import { Eye, MessageSquare, Plus, X, Search } from 'lucide-react';
 import type { WatchlistItem } from '@/lib/types';
 import { cn } from '@/utils/cn';
 import { WatchlistFormDialog } from './WatchlistFormDialog';
@@ -73,11 +74,20 @@ export function WatchlistTable({ items }: WatchlistTableProps) {
                 <tr key={item.id} className="hover:bg-muted/10 transition-colors group">
                   {/* Symbol + name — left-aligned */}
                   <td className="px-5 py-4">
-                    <div className="flex flex-col gap-0.5">
-                      <span className="font-bold text-foreground text-sm">{item.ticker}</span>
-                      <span className="text-[10px] text-muted-foreground truncate max-w-[120px] leading-tight">
-                        {item.name}
-                      </span>
+                    <div className="flex items-center gap-1.5">
+                      <div className="flex flex-col gap-0.5">
+                        <span className="font-bold text-foreground text-sm">{item.ticker}</span>
+                        <span className="text-[10px] text-muted-foreground truncate max-w-[120px] leading-tight">
+                          {item.name}
+                        </span>
+                      </div>
+                      <Link
+                        href={`/research?ticker=${item.ticker}`}
+                        title={`Research ${item.ticker}`}
+                        className="p-1 rounded-md text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors"
+                      >
+                        <Search className="h-3 w-3" />
+                      </Link>
                     </div>
                   </td>
 

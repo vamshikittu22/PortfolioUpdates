@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useState, useTransition } from 'react';
-import { Briefcase, Pencil, TrendingDown, GitBranch, Gift, Trash2 } from 'lucide-react';
+import Link from 'next/link';
+import { Briefcase, Pencil, TrendingDown, GitBranch, Gift, Trash2, Search } from 'lucide-react';
 import type { Holding } from '@/lib/types';
 import { cn } from '@/utils/cn';
 import { HoldingFormDialog } from './HoldingFormDialog';
@@ -125,14 +126,23 @@ export function HoldingsTable({ holdings }: HoldingsTableProps) {
                       )}
                     </td>
                     <td className="px-5 py-3.5 text-left">
-                      <span
-                        className={cn(
-                          'px-2 py-1 rounded-md text-[10px] font-semibold border',
-                          EXCHANGE_STYLES[h.exchange]
-                        )}
-                      >
-                        {h.exchange}
-                      </span>
+                      <div className="flex items-center gap-1.5">
+                        <span
+                          className={cn(
+                            'px-2 py-1 rounded-md text-[10px] font-semibold border',
+                            EXCHANGE_STYLES[h.exchange]
+                          )}
+                        >
+                          {h.exchange}
+                        </span>
+                        <Link
+                          href={`/research?ticker=${h.ticker}`}
+                          title={`Research ${h.ticker}`}
+                          className="p-1 rounded-md text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors"
+                        >
+                          <Search className="h-3 w-3" />
+                        </Link>
+                      </div>
                     </td>
                     <td className="px-5 py-3.5">
                       <div className="flex items-center justify-end gap-1">
