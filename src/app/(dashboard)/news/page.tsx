@@ -1,19 +1,32 @@
-'use client';
-
-import React, { useState } from 'react';
-import { usePortfolioStore } from '@/store/usePortfolioStore';
+import { Newspaper, Filter, Settings2 } from 'lucide-react';
 import { NewsFeed } from '@/components/dashboard/NewsFeed';
 import { WatchlistTable } from '@/components/dashboard/WatchlistTable';
-import { Newspaper, Filter, Settings2, Radio, X, Plus, Zap } from 'lucide-react';
-import { cn } from '@/utils/cn';
+import { createClient } from '@/utils/supabase/server';
+import { getAccountId, getWatchlist } from '@/lib/supabase/portfolio';
 
-export default function NewsPage() {
-  const { accounts, selectedAccountId } = usePortfolioStore();
-  const [trackingOpen, setTrackingOpen] = useState(false);
-  const [addSymbolValue, setAddSymbolValue] = useState('');
-  
-  if (!selectedAccountId) return null;
-  const { news, watchlist, newsPrefs, profile } = accounts[selectedAccountId];
+// Server Component: same real-data pattern as the dashboard/holdings pages
+// (PORT-01..05,07) — fetches the REAL persisted watchlist via getWatchlist,
+// no mock store. News itself (Phase 6) has no real source yet — NewsFeed
+// already renders a correct honest empty state for zero items.
+//
+// The old "Tracking Panel" (trackedSymbols add/remove, sentiment toggle
+// status bar) relied entirely on the deleted mock account store's
+// `newsPrefs`, a Phase 6 concept with no backing table yet. Per plan 02-06
+// Task 2 it is removed outright rather than wired to fake local state that
+// looks persisted but isn't. Filters/Preferences remain as inert affordances
+// (no mock data dependency) pending their own future wiring.
+export default async function NewsPage() {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  // Middleware already redirects unauthenticated requests to /login; this is
+  // a defense-in-depth guard, not the primary auth gate.
+  if (!user) return null;
+
+  const accountId = await getAccountId(supabase, user.id);
+  const watchlist = await getWatchlist(supabase, accountId);
 
   return (
     <div className="space-y-5 max-w-6xl mx-auto">
@@ -26,10 +39,10 @@ export default function NewsPage() {
               Market Intelligence
             </h1>
             <p className="text-sm text-muted-foreground mt-1.5">
-              Curated signals for <span className="font-semibold text-foreground">{profile.name}</span>
+              Curated signals for your holdings and watchlist
             </p>
           </div>
-          
+
           {/* Toolbar — high-contrast pill buttons */}
           <div className="flex items-center gap-3 shrink-0">
             <button className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold transition-all cursor-pointer border-2 border-border bg-card text-foreground hover:bg-muted hover:border-primary/40 shadow-sm">
@@ -40,104 +53,6 @@ export default function NewsPage() {
               <Settings2 className="h-3.5 w-3.5 text-primary" />
               Preferences
             </button>
-            <button 
-              onClick={() => setTrackingOpen(!trackingOpen)}
-              className={cn(
-                'inline-flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold transition-all cursor-pointer shadow-sm',
-                trackingOpen 
-                  ? 'bg-primary text-primary-foreground border-2 border-primary shadow-primary/25'
-                  : 'border-2 border-border bg-card text-foreground hover:bg-muted hover:border-primary/40'
-              )}
-            >
-              <Radio className="h-3.5 w-3.5" />
-              Tracking
-              {newsPrefs.trackedSymbols.length > 0 && (
-                <span className={cn(
-                  'text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center',
-                  trackingOpen
-                    ? 'bg-primary-foreground/25 text-primary-foreground'
-                    : 'bg-primary/15 text-primary'
-                )}>
-                  {newsPrefs.trackedSymbols.length}
-                </span>
-              )}
-            </button>
-          </div>
-        </div>
-
-        {/* Tracking Panel — expandable */}
-        {trackingOpen && (
-          <div className="rounded-xl p-4 border-2 border-primary/30 bg-primary/5 animate-in fade-in slide-in-from-top-1 duration-200">
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center gap-2 text-xs font-bold text-foreground">
-                <Radio className="h-3.5 w-3.5 text-primary" />
-                Tracked Symbols
-              </div>
-              <button 
-                onClick={() => setTrackingOpen(false)} 
-                className="p-1 rounded-md hover:bg-muted/50 text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
-              >
-                <X className="h-3.5 w-3.5" />
-              </button>
-            </div>
-            <div className="flex flex-wrap items-center gap-2">
-              {newsPrefs.trackedSymbols.map(sym => (
-                <span 
-                  key={sym} 
-                  className="group inline-flex items-center gap-1.5 px-3 py-1.5 bg-primary/15 text-primary border-2 border-primary/25 rounded-lg font-mono text-xs font-bold hover:bg-primary/20 transition-colors"
-                >
-                  {sym}
-                  <button className="opacity-0 group-hover:opacity-100 p-0.5 rounded hover:bg-primary/20 transition-all cursor-pointer">
-                    <X className="h-2.5 w-2.5" />
-                  </button>
-                </span>
-              ))}
-              {newsPrefs.trackedSymbols.length === 0 && (
-                <span className="text-xs text-muted-foreground italic">No symbols tracked for this account</span>
-              )}
-              
-              {/* Add symbol input */}
-              <div className="inline-flex items-center gap-1 px-2.5 py-1.5 bg-card border-2 border-dashed border-border rounded-lg hover:border-primary/40 transition-colors">
-                <Plus className="h-3 w-3 text-muted-foreground" />
-                <input 
-                  type="text"
-                  placeholder="Add..."
-                  value={addSymbolValue}
-                  onChange={(e) => setAddSymbolValue(e.target.value.toUpperCase())}
-                  className="bg-transparent text-xs font-mono w-14 outline-none placeholder:text-muted-foreground/50"
-                />
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Compact status bar */}
-        <div className="flex items-center gap-3 text-xs px-1">
-          <div className="flex items-center gap-2">
-            <span className="text-muted-foreground font-medium">Tracking:</span>
-            <div className="flex gap-1.5">
-              {newsPrefs.trackedSymbols.map(sym => (
-                <span key={sym} className="px-2 py-0.5 bg-primary/10 text-primary border border-primary/20 rounded font-mono text-[11px] font-bold">
-                  {sym}
-                </span>
-              ))}
-              {newsPrefs.trackedSymbols.length === 0 && (
-                <span className="text-muted-foreground italic">None</span>
-              )}
-            </div>
-          </div>
-          <div className="h-3.5 w-px bg-border" />
-          <div className="flex items-center gap-1.5">
-            <Zap className={cn('h-3 w-3', newsPrefs.sentimentEnabled ? 'text-success' : 'text-muted-foreground')} />
-            <span className="text-muted-foreground">Sentiment</span>
-            <span className={cn(
-              'px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider',
-              newsPrefs.sentimentEnabled 
-                ? 'bg-success/15 text-success border border-success/25' 
-                : 'bg-muted text-muted-foreground border border-border'
-            )}>
-              {newsPrefs.sentimentEnabled ? 'ON' : 'OFF'}
-            </span>
           </div>
         </div>
       </div>
@@ -145,12 +60,14 @@ export default function NewsPage() {
       <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
         <div className="xl:col-span-7">
           <div className="h-[800px]">
-            <NewsFeed news={news} />
+            {/* News (Phase 6) has no real source yet — NewsFeed already
+                renders a correct honest empty state for zero items. */}
+            <NewsFeed news={[]} />
           </div>
         </div>
         <div className="xl:col-span-5 space-y-6">
           <WatchlistTable items={watchlist} />
-          
+
           <div className="glass-card rounded-2xl p-5 border border-border/50 bg-gradient-to-br from-primary/5 to-transparent">
             <h3 className="text-sm font-bold flex items-center gap-2 mb-2">
               <Newspaper className="h-4 w-4 text-primary" />
