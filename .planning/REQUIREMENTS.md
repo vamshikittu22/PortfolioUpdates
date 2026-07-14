@@ -28,13 +28,13 @@ Requirements for this milestone. Each maps to a roadmap phase. Cross-cutting rul
 
 ### Prices & P&L
 
-- [ ] **PRICE-01**: System fetches current prices for all held and watched tickers (NSE `.NS`, BSE `.BO`, and US) from a free source into a shared price cache
-- [ ] **PRICE-02**: Prices auto-refresh every 2–4 hours via a scheduled job (Supabase pg_cron hitting a secret-guarded route)
+- [x] **PRICE-01**: System fetches current prices for all held and watched tickers (NSE `.NS`, BSE `.BO`, and US) from a free source into a shared price cache
+- [x] **PRICE-02**: Prices auto-refresh every 2–4 hours via a scheduled job (Supabase pg_cron hitting a secret-guarded route)
 - [ ] **PRICE-03**: User can trigger an on-demand "refresh now" that fetches the current live price
 - [ ] **PRICE-04**: Every price display shows an "as of" timestamp / staleness badge; a failed fetch shows stale-with-warning, never a fabricated value
-- [ ] **PRICE-05**: System computes per-holding and total portfolio P&L (unrealized), split into day-change and total-change
-- [ ] **PRICE-06**: P&L is stored in each holding's native currency (INR/USD) and the combined portfolio total is converted at a cached FX rate with the FX effect visible
-- [ ] **PRICE-07**: A >40% overnight price move is flagged as a possible corporate action rather than shown as a large gain/loss
+- [x] **PRICE-05**: System computes per-holding and total portfolio P&L (unrealized), split into day-change and total-change
+- [x] **PRICE-06**: P&L is stored in each holding's native currency (INR/USD) and the combined portfolio total is converted at a cached FX rate with the FX effect visible
+- [x] **PRICE-07**: A >40% overnight price move is flagged as a possible corporate action rather than shown as a large gain/loss
 
 ### Import
 
@@ -126,13 +126,13 @@ Which phases cover which requirements. Populated during roadmap creation (see RO
 | PORT-07 | Phase 2 | Complete |
 | WIRE-01 | Phase 2 | Complete |
 | WIRE-02 | Phase 2 | Complete |
-| PRICE-01 | Phase 3 | Pending |
-| PRICE-02 | Phase 3 | Pending |
+| PRICE-01 | Phase 3 | Complete |
+| PRICE-02 | Phase 3 | Complete |
 | PRICE-03 | Phase 3 | Pending |
 | PRICE-04 | Phase 3 | Pending |
-| PRICE-05 | Phase 3 | Pending |
-| PRICE-06 | Phase 3 | Pending |
-| PRICE-07 | Phase 3 | Pending |
+| PRICE-05 | Phase 3 | Complete |
+| PRICE-06 | Phase 3 | Complete |
+| PRICE-07 | Phase 3 | Complete |
 | IMPT-01 | Phase 4 | Pending |
 | IMPT-02 | Phase 4 | Pending |
 | IMPT-03 | Phase 4 | Pending |

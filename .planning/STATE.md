@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-07-13)
 
 **Core value:** The user opens the app (or gets a Telegram message) and immediately knows what's happening with *their* stocks — real holdings, real prices, real news — without digging through noise.
-**Current focus:** Phase 2 — Schema, Persistence & Hydration
+**Current focus:** Phase 3 — Price Pipeline, P&L & Scheduling
 
 ## Current Position
 
-Phase: 2 of 7 (Schema, Persistence & Hydration)
-Plan: 7 of 7 in current phase complete — 02-01 through 02-07 CODE-COMPLETE (SUMMARYs written); wave 1 + wave 2 (02-04) + wave 3 (02-05) + wave 4 (02-06, 02-07) all done — Phase 2 plans fully authored
-Status: CODE-COMPLETE, VERIFICATION DEFERRED — CODE-ONLY mode (no Docker, no live Supabase), carried forward from Phase 1. 02-02's own verification (npm run test:derive-holdings) is NOT deferred — it is a pure function with zero DB dependency and was actually run: PASS. 02-04's static verification (tsc --noEmit + grep checks: deriveHoldings reuse, no admin client in mutations, revalidatePath >= 8) is NOT deferred and was actually run: PASS. 02-06's static verification (repo-wide grep for usePortfolioStore/mock-portfolio + tsc --noEmit) is NOT deferred and was actually run: PASS — the mock portfolio store is now fully deleted from the codebase. 02-07's static verification (tsc --noEmit clean, grep for research?ticker=/useSearchParams, and an actual `next build` run that reproduced then resolved the missing-Suspense-boundary error) is NOT deferred and was actually run: PASS. Plans 02-01/02-03/02-04/02-05/02-06/02-07's live-DB behavior remain runtime-unverified pending a live DB; 02-06's own Task 4 (8-step live persistence/partial-sell/split/RLS checkpoint) is explicitly DEFERRED, not fabricated.
-Last activity: 2026-07-14 — 02-07 (WIRE-01: Research deep-links added to HoldingsTable/WatchlistTable rows linking to /research?ticker=SYMBOL; research/page.tsx reads that param on mount via useSearchParams, wrapped in a Suspense boundary required by `next build`) built, tsc clean, grep checks passing, `next build` verified end-to-end (with a diagnostic-only env override to get past an unrelated pre-existing /alerts placeholder-Supabase-URL crash), committed. Phase 2 is now fully code-complete across all 7 plans; only the live-DB verification debt below remains before Phase 2 can be marked verified.
+Phase: 3 of 7 (Price Pipeline, P&L & Scheduling)
+Plan: 2 of 6 in current phase complete (03-01, 03-02 — both SUMMARY-complete; 03-02 executed concurrently in the same session by a separate executor on non-overlapping files); Phase 2 (02-01 through 02-07) is fully CODE-COMPLETE from prior sessions.
+Status: 03-01 CODE-COMPLETE, STATIC-VERIFIED, LIVE-APPLY DEFERRED. A live hosted Supabase now exists (project `ozkorwkhtamyaavuphhm`, credentials in `.env.local`) with all 5 prior migrations (Phase 1 + Phase 2) already applied and `npm run test:rls` / `npm run test:derive-holdings` passing against it — this supersedes the "no Docker / no live Supabase" note carried forward from Phase 1/2 for those 5 migrations. However, 03-01's two NEW migrations (`price_fx_schema.sql`, `price_refresh_cron.sql`) were only authored + statically reviewed this run per explicit plan instructions (no `supabase db push`/`db reset` executed) — live push is the orchestrator's job, pending explicit user consent.
+Last activity: 2026-07-14 — 03-01 (fx_cache table + price_cache re-keyed to instrument_id with nullable price/source, fetch_error, corporate_action_flag; pg_cron/pg_net migration scheduling 3-hourly refresh with URL/secret read from current_setting, no hardcoded values) authored, all grep/git-diff-stat verification checks passed, committed as two atomic commits.
 
-Progress: [███████] 100% (7/7 plans) code authored / partial runtime-verified (02-02's pure-logic test + 02-04's static checks + 02-06's grep/tsc checks + 02-07's tsc/grep/build checks genuinely passing; DB-dependent behavior still deferred)
+Progress: [██.....] ~33% (2/6 plans in Phase 3 code-complete/static-verified: 03-01 schema, 03-02 price/P&L pure logic — see each plan's own SUMMARY for detail)
 
 ### DEFERRED verification debt (must clear before Phase 1 and 2 truly pass)
 Requires a live Supabase (Docker `npx supabase start` OR a hosted project), then:
@@ -29,7 +29,7 @@ Requires a live Supabase (Docker `npx supabase start` OR a hosted project), then
 9. Confirm the full Phase 2 persistence + hydration slice against a live DB (02-06 Task 4, the phase's closing checkpoint): add a holding, refresh survives; partial-sell keeps avg cost unchanged; 2-for-1 split drops avg cost to ~half with NO false-loss indicator; watchlist add/remove reflects live; a second user in incognito sees none of it (RLS).
 10. Confirm clicking a real holding/watchlist row's Research affordance opens `/research?ticker=X` pre-loaded for that ticker in a running browser (02-07) — code/URL-param wiring is statically verified; only the click-through against real seeded rows is deferred.
 
-Resume: all 7 plans in Phase 2 (02-01 through 02-07) are now SUMMARY-complete. Next: run `/gsd:verify-work 2` once a live Supabase DB exists to clear the DEFERRED verification debt above, or proceed to Phase 3 planning if verification is being deferred further at the user's direction.
+Resume: all 7 plans in Phase 2 (02-01 through 02-07) are now SUMMARY-complete. A live Supabase now exists and the DEFERRED items above involving the 5 Phase 1/2 migrations (test:rls, test:derive-holdings) are confirmed passing against it. Phase 3 is now underway: plan 03-01 (schema) is code-complete; plan 03-02 also has a SUMMARY from a concurrent run. Next: continue Phase 3 plans 03-03 onward, then push the accumulated new migrations (03-01's two files plus any from later plans) to the live DB with explicit user consent before Phase 3's live-verification checkpoint (03-06).
 
 ## Performance Metrics
 
@@ -61,6 +61,8 @@ Resume: all 7 plans in Phase 2 (02-01 through 02-07) are now SUMMARY-complete. N
 | Phase 02 P04 | 15min | 2 tasks | 2 files |
 | Phase 02 P06 | 25min | 3 tasks | 6 files |
 | Phase 02 P07 | 7min | 2 tasks | 3 files |
+| Phase 03 P01 | 2min | 3 tasks | 2 files |
+| Phase 03 P02 | 10min | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -78,6 +80,8 @@ Recent decisions affecting current work:
 - [Phase 02]: Data access layer (02-04): reads via injected SupabaseClient reusing deriveHoldings; 8 Server Actions mutate only via cookie-bound client (never admin), revalidate / /holdings /news
 - [Phase 02]: [Phase 02, plan 07]: Research deep-link entry point (WIRE-01) — ticker param read once on mount; useSearchParams() required a Suspense boundary in research/page.tsx, confirmed by running next build.
 - [Phase 02]: [Phase 02, plan 06]: Mock portfolio store (usePortfolioStore.ts, mock-portfolio.ts) deleted outright, closing out PORT-07 — layout.tsx uses a static single-account label instead of a fetched name (smaller diff, matches the single-account-per-user scope decision); News/Alerts pages pass honest empty arrays for not-yet-built Phase 5/6 data instead of any mock fallback.
+- [Phase 03]: price_cache re-keyed from symbol to instrument_id; price/source made nullable to represent honest never-fetched state
+- [Phase 03]: Price ingestion + P&L pure logic isolated in src/lib/prices/* with zero I/O; never-fabricate-a-value discipline (parse failures -> null, unpriced holdings -> status:'pending' with null fields, not 0); proven by npm run test:price-pnl (node:assert/strict, no jest/vitest)
 
 ### Pending Todos
 
@@ -96,5 +100,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-07-14
-Stopped at: Completed 02-07-PLAN.md (Research deep-link entry point, WIRE-01: HoldingsTable/WatchlistTable link to /research?ticker=SYMBOL; research/page.tsx reads the param via useSearchParams inside a Suspense boundary). All 7 Phase 2 plans (02-01 through 02-07) now CODE-COMPLETE. Ready for the Phase 2 live-DB verification gate, or Phase 3 planning.
+Stopped at: Completed both wave-1 Phase 3 plans. 03-01 (fx_cache table + price_cache re-keyed to instrument_id with nullable price/source/fetch_error/corporate_action_flag; pg_cron+pg_net 3-hourly refresh scheduling migration, secret/URL read from current_setting — no hardcoded values): migrations authored and statically verified only, live push to the now-existing hosted Supabase remains deferred pending orchestrator/user consent. 03-02 (price ingestion + P&L pure logic layer — parseYahooChartResponse, detectCorporateAction, shouldSkipRefresh, isAuthorizedRefreshRequest, convertToBaseCurrency, calculateHoldingPnL, calculatePortfolioTotals): fully TDD'd RED->GREEN, `npm run test:price-pnl` genuinely PASSING (not deferred — pure logic, zero DB/network dependency), `npx tsc --noEmit` clean.
 Resume file: None
