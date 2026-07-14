@@ -60,11 +60,20 @@ loadEnvLocal()
 
 const URL_ = process.env.NEXT_PUBLIC_SUPABASE_URL
 const ANON = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+const SERVICE = process.env.SUPABASE_SERVICE_ROLE_KEY
 
 if (!URL_ || !ANON || URL_.includes('PLACEHOLDER') || ANON.includes('PLACEHOLDER')) {
   console.error(
     'FAIL: NEXT_PUBLIC_SUPABASE_URL / NEXT_PUBLIC_SUPABASE_ANON_KEY are missing or still placeholders.\n' +
-      'Start the local stack (`npx supabase start`) and put the printed anon key + URL in .env.local, then re-run.'
+      'Point .env.local at a Supabase instance (hosted project API settings, or `npx supabase start`), then re-run.'
+  )
+  process.exit(1)
+}
+
+if (!SERVICE || SERVICE.includes('PLACEHOLDER')) {
+  console.error(
+    'FAIL: SUPABASE_SERVICE_ROLE_KEY is missing or still a placeholder.\n' +
+      'It is required only to CREATE the two pre-confirmed test users; all RLS assertions still run through the anon key.'
   )
   process.exit(1)
 }
@@ -72,10 +81,25 @@ if (!URL_ || !ANON || URL_.includes('PLACEHOLDER') || ANON.includes('PLACEHOLDER
 const URL: string = URL_
 const PASSWORD = 'Passw0rd!test'
 
+// Admin client — used ONLY to provision the two test users. Hosted projects have
+// email confirmation enabled, so anon signUp yields an unconfirmed user that cannot
+// sign in. Creating them with email_confirm:true is test setup, NOT a weakening of
+// the RLS proof: every assertion below still goes through the anon key + a real user JWT.
+const admin = createClient(URL, SERVICE, {
+  auth: { autoRefreshToken: false, persistSession: false },
+})
+
 async function signedIn(email: string): Promise<SupabaseClient> {
+  const { error: createErr } = await admin.auth.admin.createUser({
+    email,
+    password: PASSWORD,
+    email_confirm: true,
+  })
+  // An already-existing user is fine — we sign in next either way.
+  if (createErr && !/already/i.test(createErr.message)) {
+    throw new Error(`FAIL: could not create ${email}: ${createErr.message}`)
+  }
   const c = createClient(URL, ANON!)
-  // signUp may fail if the user already exists — that is fine, we sign in next.
-  await c.auth.signUp({ email, password: PASSWORD }).catch(() => {})
   const { error } = await c.auth.signInWithPassword({ email, password: PASSWORD })
   if (error) throw new Error(`FAIL: could not sign in ${email}: ${error.message}`)
   return c
@@ -97,30 +121,38 @@ async function main(): Promise<void> {
     throw new Error(`FAIL: user A has no default account (trigger?): ${acctErr?.message}`)
   }
 
-  const { error: insErr } = await a.from('holdings').insert({
-    account_id: acctA.id,
-    symbol: 'INFY',
-    exchange: 'NSE',
-    asset_type: 'stocks',
-    quantity: 1,
-    avg_buy_price: 1,
-    currency: 'INR',
-  })
-  if (insErr) throw new Error(`FAIL: user A could not insert own holding: ${insErr.message}`)
+  // Instruments are a shared, read-only master table — pick a seeded row to reference.
+  const { data: instr, error: instrErr } = await a
+    .from('instruments')
+    .select('id')
+    .eq('symbol', 'INFY')
+    .eq('exchange', 'NSE')
+    .limit(1)
+    .single()
+  if (instrErr || !instr) {
+    throw new Error(`FAIL: seeded instrument INFY/NSE not readable: ${instrErr?.message}`)
+  }
 
-  // 1. RLS read isolation — B must NOT see A's holdings.
-  const { data: leak } = await b.from('holdings').select('*')
-  if ((leak?.length ?? 0) !== 0) throw new Error('FAIL: RLS read leak — B can read A holdings')
+  const { error: insErr } = await a.from('transactions').insert({
+    account_id: acctA.id,
+    instrument_id: instr.id,
+    transaction_type: 'BUY',
+    quantity: 1,
+    price: 1,
+  })
+  if (insErr) throw new Error(`FAIL: user A could not insert own transaction: ${insErr.message}`)
+
+  // 1. RLS read isolation — B must NOT see A's transactions.
+  const { data: leak } = await b.from('transactions').select('*')
+  if ((leak?.length ?? 0) !== 0) throw new Error('FAIL: RLS read leak — B can read A transactions')
 
   // 2. RLS write isolation — B must NOT write into A's account.
-  const { error: writeErr } = await b.from('holdings').insert({
+  const { error: writeErr } = await b.from('transactions').insert({
     account_id: acctA.id,
-    symbol: 'HACK',
-    exchange: 'NSE',
-    asset_type: 'stocks',
+    instrument_id: instr.id,
+    transaction_type: 'BUY',
     quantity: 1,
-    avg_buy_price: 1,
-    currency: 'INR',
+    price: 1,
   })
   if (!writeErr) throw new Error('FAIL: RLS write leak — B wrote into A account')
 
