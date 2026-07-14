@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test:rls": "tsx scripts/rls-isolation-test.ts"
+    "test:rls": "tsx scripts/rls-isolation-test.ts",
+    "test:derive-holdings": "tsx scripts/derive-holdings-test.ts"
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
