@@ -1,8 +1,21 @@
 import { NextResponse } from 'next/server';
 import fs from 'fs';
 import path from 'path';
+import { createClient } from '@/utils/supabase/server';
+
+// DEFERRED (Phase 1+): keys are global + written to .env.local via fs; move to
+// per-user encrypted storage / Supabase Vault. This phase only gates access.
+async function requireUser() {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  return user;
+}
 
 export async function GET() {
+  if (!(await requireUser())) return new Response(null, { status: 401 });
+
   return NextResponse.json({
     gemini: !!process.env.GEMINI_API_KEY && process.env.GEMINI_API_KEY !== 'your-gemini-api-key',
     openai: !!process.env.OPENAI_API_KEY && process.env.OPENAI_API_KEY !== 'your-openai-api-key',
@@ -14,6 +27,8 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
+  if (!(await requireUser())) return new Response(null, { status: 401 });
+
   try {
     const { provider, key } = await request.json();
 
