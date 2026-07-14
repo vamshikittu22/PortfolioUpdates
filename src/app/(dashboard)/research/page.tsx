@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { Search, Loader2, RefreshCw, HelpCircle, ShieldAlert, Building2 } from 'lucide-react';
 import { StockSearchBar } from '@/components/research/StockSearchBar';
 import { OverviewTab } from '@/components/research/OverviewTab';
@@ -17,7 +18,26 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { cn } from '@/utils/cn';
 
 export default function ResearchPage() {
+  // useSearchParams() requires a Suspense boundary above it during static
+  // generation (Next.js "missing-suspense-with-csr-bailout"); confirmed by
+  // running `next build`, so this wrapper is not speculative. Fallback is
+  // intentionally minimal — this page is client-rendered top to bottom and
+  // the wrapped content itself already renders its own loading state.
+  return (
+    <Suspense fallback={null}>
+      <ResearchPageContent />
+    </Suspense>
+  );
+}
+
+function ResearchPageContent() {
   const isModuleEnabled = process.env.NEXT_PUBLIC_ENABLE_RESEARCH_MODULE !== 'false';
+  const searchParams = useSearchParams();
+  // Deep-link entry point (WIRE-01): a held/watched row's "Research" link
+  // navigates to /research?ticker=SYMBOL. Read once on mount below; falls
+  // back to the existing HDFCBANK default when the param is absent so
+  // direct navigation to /research keeps its current behavior unchanged.
+  const tickerParam = searchParams.get('ticker');
 
   const [selectedTicker, setSelectedTicker] = useState<string>('');
   const [report, setReport] = useState<ResearchReport | null>(null);
@@ -43,9 +63,12 @@ export default function ResearchPage() {
       try {
         const stocks = await getAvailableStocks();
         setAvailableStocks(stocks);
-        // Load HDFCBANK by default to show a premium populated state
+        // Prefer the ?ticker= URL param (deep-linked from a real held/watched
+        // row, WIRE-01); otherwise load HDFCBANK by default to show a
+        // premium populated state — additive, not a regression of the
+        // existing direct-navigation default.
         if (stocks.length > 0) {
-          const defaultTicker = 'HDFCBANK';
+          const defaultTicker = tickerParam ? tickerParam.toUpperCase() : 'HDFCBANK';
           setSelectedTicker(defaultTicker);
         }
       } catch (err) {
