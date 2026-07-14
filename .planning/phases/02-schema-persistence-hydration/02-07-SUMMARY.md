@@ -138,3 +138,5 @@ Per the CODE-ONLY / DEFER-VERIFICATION mode. Nothing below was executed; nothing
 ## Self-Check: PASSED
 
 All 3 modified source files + this SUMMARY.md confirmed present on disk; commits `22f238a`, `e516d93`, `760a7fb` confirmed present in `git log`.
+
+**Addendum:** the same shared-working-tree race described in Deviation 2 recurred once more at the final metadata-commit step — `.planning/phases/02-schema-persistence-hydration/02-06-SUMMARY.md` (the concurrent 02-06 executor's own summary output, staged into the shared index between my `git add` and `git commit`) was swept into commit `a75a6f4`. Corrected identically via `git rm --cached` + a follow-up commit `8026adc`, leaving `02-06-SUMMARY.md` untouched on disk and untracked again for the 02-06 executor to commit itself. No 02-07 content was affected.
