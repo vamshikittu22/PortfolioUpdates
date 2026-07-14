@@ -53,7 +53,9 @@ const navigationItems: SidebarItem[] = [
   { name: 'News', href: '/news', icon: Newspaper },
   { name: 'Research', href: '/research', icon: SearchCode },
   { name: 'YouTube Intel', href: '/youtube', icon: Youtube },
-  { name: 'Alerts', href: '/alerts', icon: Bell, badge: 3 },
+  // No badge until a real alerts count exists (Phase 5/6). A hardcoded count
+  // would claim alerts the empty alerts page does not have.
+  { name: 'Alerts', href: '/alerts', icon: Bell },
   { name: 'Settings', href: '/settings', icon: Settings },
 ];
 
