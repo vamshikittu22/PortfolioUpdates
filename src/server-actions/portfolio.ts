@@ -15,8 +15,9 @@
 
 import { revalidatePath } from 'next/cache';
 import { createClient } from '@/utils/supabase/server';
-import { getAccountId } from '@/lib/supabase/portfolio';
+import { getAccountId, searchInstruments } from '@/lib/supabase/portfolio';
 import type { SupabaseClient } from '@supabase/supabase-js';
+import type { Instrument } from '@/lib/types';
 
 type ActionResult = { success: true } | { success: false; error: string };
 
@@ -258,6 +259,26 @@ export async function addToWatchlist(input: AddToWatchlistInput): Promise<Action
   revalidatePath('/holdings');
   revalidatePath('/news');
   return { success: true };
+}
+
+/**
+ * searchInstrumentsAction — thin Server Action wrapper around
+ * `searchInstruments` (PORT-06 enforcement point: dialogs must search the
+ * real ISIN+exchange master, never accept a free-text ticker). Exposed here
+ * rather than a new API route to stay consistent with this phase's chosen
+ * pattern of calling Server Actions directly from Client Components. This
+ * is a small addition to this file beyond its original (02-04) task list,
+ * per plan 02-05's instruction. Read-only — no accountId resolution needed,
+ * only an authenticated session (matches `instruments`' RLS: any
+ * authenticated user may SELECT the shared reference table).
+ */
+export async function searchInstrumentsAction(query: string): Promise<Instrument[]> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) throw new Error('Unauthorized');
+  return searchInstruments(supabase, query);
 }
 
 export interface RemoveFromWatchlistInput {
