@@ -24,7 +24,7 @@ Requirements for this milestone. Each maps to a roadmap phase. Cross-cutting rul
 - [x] **PORT-04**: Holdings are derived from a transactions ledger (BUY/SELL entries), so quantity and average cost stay correct after partial sells
 - [x] **PORT-05**: User can record a manual stock split / bonus action that adjusts derived quantity and average cost without showing a false loss
 - [x] **PORT-06**: Every instrument resolves against a symbol master keyed by ISIN + exchange (NSE/BSE/US), with the correct display symbol, currency, and price-source symbol
-- [ ] **PORT-07**: Dashboard, holdings, watchlist, and allocation views read persisted user data (mock portfolio store removed)
+- [x] **PORT-07**: Dashboard, holdings, watchlist, and allocation views read persisted user data (mock portfolio store removed)
 
 ### Prices & P&L
 
@@ -67,7 +67,7 @@ Requirements for this milestone. Each maps to a roadmap phase. Cross-cutting rul
 
 ### Existing Modules (wiring)
 
-- [ ] **WIRE-01**: The AI research module is deep-linked from real holdings/watchlist (open research for a held ticker), reading persisted data rather than mock
+- [x] **WIRE-01**: The AI research module is deep-linked from real holdings/watchlist (open research for a held ticker), reading persisted data rather than mock
 - [x] **WIRE-02**: The YouTube sentiment module remains available and reads the user's persisted channel list
 
 ## v2 Requirements
@@ -123,8 +123,8 @@ Which phases cover which requirements. Populated during roadmap creation (see RO
 | PORT-04 | Phase 2 | Complete |
 | PORT-05 | Phase 2 | Complete |
 | PORT-06 | Phase 2 | Complete |
-| PORT-07 | Phase 2 | Pending |
-| WIRE-01 | Phase 2 | Pending |
+| PORT-07 | Phase 2 | Complete |
+| WIRE-01 | Phase 2 | Complete |
 | WIRE-02 | Phase 2 | Complete |
 | PRICE-01 | Phase 3 | Pending |
 | PRICE-02 | Phase 3 | Pending |
