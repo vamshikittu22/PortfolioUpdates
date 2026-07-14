@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-07-13)
 ## Current Position
 
 Phase: 3 of 7 (Price Pipeline, P&L & Scheduling)
-Plan: 2 of 6 in current phase complete (03-01, 03-02 — both SUMMARY-complete; 03-02 executed concurrently in the same session by a separate executor on non-overlapping files); Phase 2 (02-01 through 02-07) is fully CODE-COMPLETE from prior sessions.
-Status: 03-01 CODE-COMPLETE, STATIC-VERIFIED, LIVE-APPLY DEFERRED. A live hosted Supabase now exists (project `ozkorwkhtamyaavuphhm`, credentials in `.env.local`) with all 5 prior migrations (Phase 1 + Phase 2) already applied and `npm run test:rls` / `npm run test:derive-holdings` passing against it — this supersedes the "no Docker / no live Supabase" note carried forward from Phase 1/2 for those 5 migrations. However, 03-01's two NEW migrations (`price_fx_schema.sql`, `price_refresh_cron.sql`) were only authored + statically reviewed this run per explicit plan instructions (no `supabase db push`/`db reset` executed) — live push is the orchestrator's job, pending explicit user consent.
-Last activity: 2026-07-14 — 03-01 (fx_cache table + price_cache re-keyed to instrument_id with nullable price/source, fetch_error, corporate_action_flag; pg_cron/pg_net migration scheduling 3-hourly refresh with URL/secret read from current_setting, no hardcoded values) authored, all grep/git-diff-stat verification checks passed, committed as two atomic commits.
+Plan: 3 of 6 in current phase complete (03-01, 03-02, 03-03 — all SUMMARY-complete; 03-02 executed concurrently in an earlier session by a separate executor on non-overlapping files); Phase 2 (02-01 through 02-07) is fully CODE-COMPLETE from prior sessions.
+Status: 03-03 CODE-COMPLETE, STATIC-VERIFIED, and LIVE-SMOKE-TESTED. `fetchPrices` (Yahoo Finance) and `fetchFXRate` (exchangerate.host) authored as pure network wrappers around 03-02's tested `parseYahooChartResponse` — `npx tsc --noEmit` clean, `npm run test:price-pnl` still passing unchanged. A bonus live smoke test (uncommitted script, removed after use) confirmed `fetchPrices` against real Yahoo Finance data (AAPL, INFY.NS both returned real live prices; an invalid ticker returned an honest `HTTP 404` error, never a fabricated price). It also surfaced a real-world finding: `exchangerate.host`'s free `/convert` endpoint now returns `missing_access_key` — the free-tier FX source assumed in 03-RESEARCH.md now requires a paid key. `fetchFXRate` degraded correctly (explicit `fetchError`, no fabricated rate), so no code defect, but a future plan (03-04 or later) must register a key or swap FX providers before `fx_cache` can populate for real. 03-01's two migrations remain authored + statically reviewed only; live push to the hosted Supabase (project `ozkorwkhtamyaavuphhm`) is still pending explicit user consent.
+Last activity: 2026-07-14 — 03-03 (fetchPrices + fetchFXRate network wrappers, honest-failure discipline, live Yahoo Finance smoke test) completed, committed as two atomic commits.
 
-Progress: [██.....] ~33% (2/6 plans in Phase 3 code-complete/static-verified: 03-01 schema, 03-02 price/P&L pure logic — see each plan's own SUMMARY for detail)
+Progress: [███....] ~50% (3/6 plans in Phase 3 code-complete/static-verified: 03-01 schema, 03-02 price/P&L pure logic, 03-03 network wrappers — see each plan's own SUMMARY for detail)
 
 ### DEFERRED verification debt (must clear before Phase 1 and 2 truly pass)
 Requires a live Supabase (Docker `npx supabase start` OR a hosted project), then:
@@ -63,6 +63,7 @@ Resume: all 7 plans in Phase 2 (02-01 through 02-07) are now SUMMARY-complete. A
 | Phase 02 P07 | 7min | 2 tasks | 3 files |
 | Phase 03 P01 | 2min | 3 tasks | 2 files |
 | Phase 03 P02 | 10min | 2 tasks | 4 files |
+| Phase 03 P03 | 15min | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -82,6 +83,8 @@ Recent decisions affecting current work:
 - [Phase 02]: [Phase 02, plan 06]: Mock portfolio store (usePortfolioStore.ts, mock-portfolio.ts) deleted outright, closing out PORT-07 — layout.tsx uses a static single-account label instead of a fetched name (smaller diff, matches the single-account-per-user scope decision); News/Alerts pages pass honest empty arrays for not-yet-built Phase 5/6 data instead of any mock fallback.
 - [Phase 03]: price_cache re-keyed from symbol to instrument_id; price/source made nullable to represent honest never-fetched state
 - [Phase 03]: Price ingestion + P&L pure logic isolated in src/lib/prices/* with zero I/O; never-fabricate-a-value discipline (parse failures -> null, unpriced holdings -> status:'pending' with null fields, not 0); proven by npm run test:price-pnl (node:assert/strict, no jest/vitest)
+- [Phase 03]: fetchPrices/fetchFXRate (03-03) are pure network wrappers keyed only by symbol/currency-pair strings — no Supabase/instrument_id awareness; caller (03-04) owns symbol->instrument_id mapping and preserving last-known-good fx_cache/price_cache rows on failure
+- [Phase 03]: Live finding (03-03): exchangerate.host's free /convert endpoint now returns missing_access_key in production — the "free, no key" FX source assumed in 03-RESEARCH.md is stale. fetchFXRate degrades correctly (honest error, no fabricated rate) but 03-04/later must register a key or swap FX providers before fx_cache can populate for real.
 
 ### Pending Todos
 
@@ -94,11 +97,12 @@ None yet.
 [Issues that affect future work]
 
 - REQUIREMENTS.md header stated "36 total" but the enumerated v1 IDs total **39** (AUTH 6, PORT 7, PRICE 7, IMPT 5, NEWS 5, ALRT 5, DGST 2, WIRE 2). Traceability count corrected to 39/39; header wording left for the user to confirm.
+- [Phase 03, plan 03] exchangerate.host's free FX endpoint now requires a paid access key (`missing_access_key` error confirmed live) — 03-RESEARCH.md's "free, no key" assumption is stale. Must be resolved (API key or provider swap, e.g. Frankfurter/open.er-api.com) before 03-04/03-06's live FX refresh can populate `fx_cache` end-to-end. Does not block 03-03 itself (honest-failure contract fully met).
 - Research flags for phase-time verification: Vercel Hobby function-duration + pg_cron→pg_net ergonomics (Phase 3), Groww XLSX / Robinhood CSV real layouts (Phase 4), exact Gemini free-tier RPD + Finnhub US-only (Phase 6).
 - [RESOLVED via decision] Plan 01-01 Task 3 was blocked by missing Docker. Superseded by the CODE-ONLY / DEFER-VERIFICATION decision — no Docker/live DB used. DEFERRED work carried forward: `supabase start`, applying migrations against a live DB, verifying RLS enforcement, and capturing real anon/service-role keys. Must be done before Phase 1 verification can pass.
 
 ## Session Continuity
 
 Last session: 2026-07-14
-Stopped at: Completed both wave-1 Phase 3 plans. 03-01 (fx_cache table + price_cache re-keyed to instrument_id with nullable price/source/fetch_error/corporate_action_flag; pg_cron+pg_net 3-hourly refresh scheduling migration, secret/URL read from current_setting — no hardcoded values): migrations authored and statically verified only, live push to the now-existing hosted Supabase remains deferred pending orchestrator/user consent. 03-02 (price ingestion + P&L pure logic layer — parseYahooChartResponse, detectCorporateAction, shouldSkipRefresh, isAuthorizedRefreshRequest, convertToBaseCurrency, calculateHoldingPnL, calculatePortfolioTotals): fully TDD'd RED->GREEN, `npm run test:price-pnl` genuinely PASSING (not deferred — pure logic, zero DB/network dependency), `npx tsc --noEmit` clean.
+Stopped at: Completed 03-03 (fetchPrices + fetchFXRate network wrappers). `npx tsc --noEmit` clean, `npm run test:price-pnl` still passing unchanged. Live smoke test (bonus, uncommitted script) confirmed fetchPrices works against real Yahoo Finance data with honest per-symbol error handling; surfaced that exchangerate.host's free FX endpoint now requires a paid key (fetchFXRate degraded correctly, no fabricated rate — see Blockers/Concerns). 03-01 (fx_cache table + price_cache re-keyed to instrument_id with nullable price/source/fetch_error/corporate_action_flag; pg_cron+pg_net 3-hourly refresh scheduling migration, secret/URL read from current_setting — no hardcoded values): migrations authored and statically verified only, live push to the now-existing hosted Supabase remains deferred pending orchestrator/user consent. 03-02 (price ingestion + P&L pure logic layer): fully TDD'd RED->GREEN, `npm run test:price-pnl` genuinely PASSING, `npx tsc --noEmit` clean.
 Resume file: None
