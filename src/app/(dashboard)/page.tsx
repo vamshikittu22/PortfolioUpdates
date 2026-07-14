@@ -5,11 +5,14 @@ import { AllocationChart } from '@/components/dashboard/AllocationChart';
 import { WatchlistTable } from '@/components/dashboard/WatchlistTable';
 import { NewsFeed } from '@/components/dashboard/NewsFeed';
 import { createClient } from '@/utils/supabase/server';
-import { getAccountId, getHoldings, getWatchlist } from '@/lib/supabase/portfolio';
+import { getAccountId, getWatchlist } from '@/lib/supabase/portfolio';
+import { getPortfolioPnL } from '@/lib/prices/get-portfolio-pnl';
+import type { Currency } from '@/lib/types';
 
 // Server Component: hydrates from real persisted data via the wave-2 data
-// access layer (PORT-01..05,07). No price feed exists yet (Phase 3), so
-// every price-dependent KPI is honestly shown as pending, never fabricated.
+// access layer (PORT-01..05,07) PLUS Phase 3's price/P&L glue
+// (getPortfolioPnL). A held instrument with no cached price yet still shows
+// an honest pending state — never a fabricated number.
 export default async function DashboardPage() {
   const supabase = await createClient();
   const {
@@ -21,21 +24,30 @@ export default async function DashboardPage() {
   if (!user) return null;
 
   const accountId = await getAccountId(supabase, user.id);
-  const [holdings, watchlist] = await Promise.all([
-    getHoldings(supabase, accountId),
+
+  // fx_cache only stores the USD_INR pair today — base_currency determines
+  // whether that rate is even oriented usefully for this account (see
+  // get-portfolio-pnl.ts's fxUnavailable doc comment).
+  const { data: accountRow } = await supabase
+    .from('investment_accounts')
+    .select('base_currency')
+    .eq('id', accountId)
+    .single();
+  const baseCurrency: Currency = (accountRow?.base_currency as Currency | undefined) ?? 'INR';
+
+  const [{ holdings, portfolioTotal, fxRate, fxUnavailable }, watchlist] = await Promise.all([
+    getPortfolioPnL(supabase, accountId, baseCurrency),
     getWatchlist(supabase, accountId),
   ]);
 
-  // "Total Invested" is cost basis (quantity * avgCost), NOT market value —
-  // there is no live price feed until Phase 3. Note: this naively sums
-  // across currencies without FX conversion (Phase 2 MVP simplification,
-  // same spirit as editHolding/deleteHolding's documented simplifications).
-  const totalInvested = holdings.reduce((sum, h) => sum + h.quantity * h.avgCost, 0);
-  const totalInvestedFormatted = new Intl.NumberFormat('en-IN', {
-    style: 'currency',
-    currency: 'INR',
-    maximumFractionDigits: 0,
-  }).format(totalInvested);
+  const anyPriced = holdings.some((h) => h.status === 'priced');
+
+  const currencyFmt = (value: number) =>
+    new Intl.NumberFormat(baseCurrency === 'INR' ? 'en-IN' : 'en-US', {
+      style: 'currency',
+      currency: baseCurrency,
+      maximumFractionDigits: 0,
+    }).format(value);
 
   // Allocation grouped by exchange — the old mock `sector` field doesn't
   // exist on the real schema. Value is cost basis for that exchange.
@@ -46,27 +58,49 @@ export default async function DashboardPage() {
   }
   const allocation = Array.from(allocationByExchange.entries()).map(([name, value]) => ({ name, value }));
 
+  // FX effect visible on the total (PRICE-06), never silently blended into
+  // one opaque number. Only relevant when this account actually holds a
+  // non-base-currency instrument.
+  const nonBaseSubtotal = Object.entries(portfolioTotal.nativeSubtotals).find(
+    ([currency, subtotal]) => currency !== baseCurrency && subtotal.costBasis > 0
+  );
+  let fxSubtitle: string | undefined;
+  if (nonBaseSubtotal) {
+    fxSubtitle = fxUnavailable
+      ? `FX rate unavailable — ${nonBaseSubtotal[0]} holdings excluded from total`
+      : fxRate !== null
+        ? `incl. ${nonBaseSubtotal[0]} holdings @ ${fxRate.toFixed(2)} ${nonBaseSubtotal[0]}→${baseCurrency}`
+        : undefined;
+  }
+
   return (
     <div className="space-y-6">
-      {/* Row 1: KPI Cards — only honestly-derivable values pre-Phase-3 */}
+      {/* Row 1: KPI Cards — real prices/P&L now that pricing exists (Phase 3) */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <KPICard
-          title="Total Invested"
-          value={totalInvestedFormatted}
+          title="Portfolio Value"
+          value={anyPriced ? currencyFmt(portfolioTotal.totalCurrentValue) : '—'}
           icon={<Wallet className="h-4.5 w-4.5" />}
-          subtitle="Cost basis, not market value"
+          subtitle={
+            anyPriced
+              ? (fxSubtitle ?? `Cost basis ${currencyFmt(portfolioTotal.totalCostBasis)}`)
+              : 'No live prices yet'
+          }
         />
 
         <KPICard
-          title="Live Pricing"
-          value="—"
+          title="Day P&L"
+          value={anyPriced ? currencyFmt(portfolioTotal.totalDayChange) : '—'}
           icon={<TrendingUp className="h-4.5 w-4.5" />}
-          trendIsNeutral
-          trend={{
-            value: 'Phase 3',
-            isPositive: true,
-            label: 'Price feed not connected yet',
-          }}
+          trendIsNeutral={!anyPriced}
+          trend={
+            anyPriced
+              ? {
+                  value: `${portfolioTotal.totalDayChange >= 0 ? '+' : ''}${currencyFmt(portfolioTotal.totalDayChange)}`,
+                  isPositive: portfolioTotal.totalDayChange >= 0,
+                }
+              : { value: 'Pending', isPositive: true, label: 'No priced holdings yet' }
+          }
         />
 
         <KPICard

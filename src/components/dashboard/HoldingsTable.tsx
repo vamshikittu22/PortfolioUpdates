@@ -2,17 +2,18 @@
 
 import React, { useState, useTransition } from 'react';
 import Link from 'next/link';
-import { Briefcase, Pencil, TrendingDown, GitBranch, Gift, Trash2, Search } from 'lucide-react';
-import type { Holding } from '@/lib/types';
+import { Briefcase, Pencil, TrendingDown, GitBranch, Gift, Trash2, Search, AlertTriangle } from 'lucide-react';
+import type { PricedHolding } from '@/lib/prices/get-portfolio-pnl';
 import { cn } from '@/utils/cn';
 import { HoldingFormDialog } from './HoldingFormDialog';
+import { StalenessBadge } from './StalenessBadge';
 import { deleteHolding } from '@/server-actions/portfolio';
 
 interface HoldingsTableProps {
-  holdings: Holding[];
+  holdings: PricedHolding[];
 }
 
-const formatCurrency = (value: number, currency: Holding['currency']) => {
+const formatCurrency = (value: number, currency: PricedHolding['currency']) => {
   return new Intl.NumberFormat(currency === 'INR' ? 'en-IN' : 'en-US', {
     style: 'currency',
     currency,
@@ -20,13 +21,30 @@ const formatCurrency = (value: number, currency: Holding['currency']) => {
   }).format(value);
 };
 
-const EXCHANGE_STYLES: Record<Holding['exchange'], string> = {
+const EXCHANGE_STYLES: Record<PricedHolding['exchange'], string> = {
   NSE: 'bg-blue-500/10 text-blue-500 border-blue-500/20',
   BSE: 'bg-orange-500/10 text-orange-500 border-orange-500/20',
   NASDAQ: 'bg-[#a855f7]/10 text-[#a855f7] border-[#a855f7]/20',
   NYSE: 'bg-[#22c55e]/10 text-[#22c55e] border-[#22c55e]/20',
   OTHER: 'bg-muted text-muted-foreground border-border/50',
 };
+
+// Signed percent/amount pill — used for both day-change and total-return
+// cells. `null` renders nothing (caller decides the pending fallback), it
+// never renders 0/NaN for a value that doesn't actually exist yet.
+function SignedPercent({ pct }: { pct: number }) {
+  return (
+    <div
+      className={cn(
+        'inline-flex items-center justify-end gap-1 px-2 py-1 rounded-md text-xs font-bold font-tabular',
+        pct >= 0 ? 'bg-success/10 text-success' : 'bg-danger/10 text-danger'
+      )}
+    >
+      {pct >= 0 ? '+' : '-'}
+      {Math.abs(pct).toFixed(2)}%
+    </div>
+  );
+}
 
 export function HoldingsTable({ holdings }: HoldingsTableProps) {
   const [isPending, startTransition] = useTransition();
@@ -69,6 +87,7 @@ export function HoldingsTable({ holdings }: HoldingsTableProps) {
                 <th className="px-5 py-4 tracking-wider text-left">Asset</th>
                 <th className="px-5 py-4 tracking-wider text-right">Avg Price</th>
                 <th className="px-5 py-4 tracking-wider text-right">Current Price</th>
+                <th className="px-5 py-4 tracking-wider text-right">Day Change</th>
                 <th className="px-5 py-4 tracking-wider text-right">Total Return</th>
                 <th className="px-5 py-4 tracking-wider text-left">Exchange</th>
                 <th className="px-5 py-4 tracking-wider text-right">Actions</th>
@@ -77,6 +96,12 @@ export function HoldingsTable({ holdings }: HoldingsTableProps) {
             <tbody className="divide-y divide-border/30">
               {holdings.map((h) => {
                 const instrumentLabel = `${h.ticker} · ${h.exchange}`;
+                // The em-dash "pending" path from Phase 2 is not deleted —
+                // it's now conditional on whether calculateHoldingPnL
+                // actually produced a priced result (status === 'priced'),
+                // never on whether the field happens to be non-undefined.
+                const isPriced = h.status === 'priced';
+
                 return (
                   <tr key={h.instrumentId} className="hover:bg-muted/10 transition-colors group">
                     <td className="px-5 py-3.5">
@@ -93,34 +118,57 @@ export function HoldingsTable({ holdings }: HoldingsTableProps) {
                       </span>
                     </td>
                     <td className="px-5 py-3.5 text-right">
-                      {/* currentPrice is undefined pre-Phase-3 — an honest
-                          pending state, never a fabricated number or NaN. */}
-                      {h.currentPrice !== undefined ? (
-                        <div className="font-tabular font-medium text-foreground">
-                          {formatCurrency(h.currentPrice, h.currency)}
+                      <div className="flex flex-col items-end gap-1">
+                        {isPriced && h.currentPrice !== undefined ? (
+                          <span className="font-tabular font-medium text-foreground">
+                            {formatCurrency(h.currentPrice, h.currency)}
+                          </span>
+                        ) : (
+                          <span
+                            className="font-tabular font-medium text-muted-foreground"
+                            title="Not yet priced"
+                          >
+                            —
+                          </span>
+                        )}
+                        <StalenessBadge staleness={h.staleness} />
+                        {h.corporateActionFlag && (
+                          <span
+                            title="Overnight move exceeds 40% — verify before trading. Price is still shown, not hidden."
+                            className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[9px] font-semibold border bg-warning/10 text-warning border-warning/25"
+                          >
+                            <AlertTriangle className="h-2.5 w-2.5" />
+                            Possible corporate action — verify before trading
+                          </span>
+                        )}
+                      </div>
+                    </td>
+                    <td className="px-5 py-3.5 text-right">
+                      {isPriced && h.dayChangePct !== null && h.dayChangeAmount !== null ? (
+                        <div className="flex flex-col items-end gap-0.5">
+                          <SignedPercent pct={h.dayChangePct} />
+                          <span className="text-[10px] text-muted-foreground font-tabular">
+                            {h.dayChangeAmount >= 0 ? '+' : ''}
+                            {formatCurrency(h.dayChangeAmount, h.currency)}
+                          </span>
                         </div>
                       ) : (
-                        <div
-                          className="font-tabular font-medium text-muted-foreground"
-                          title="Pricing arrives in Phase 3"
-                        >
+                        <span className="text-muted-foreground text-xs" title="Not yet priced">
                           —
-                        </div>
+                        </span>
                       )}
                     </td>
                     <td className="px-5 py-3.5 text-right">
-                      {h.totalChangePercent !== undefined ? (
-                        <div
-                          className={cn(
-                            'inline-flex items-center justify-end gap-1 px-2 py-1 rounded-md text-xs font-bold font-tabular',
-                            h.totalChangePercent >= 0 ? 'bg-success/10 text-success' : 'bg-danger/10 text-danger'
-                          )}
-                        >
-                          {h.totalChangePercent >= 0 ? '+' : '-'}
-                          {Math.abs(h.totalChangePercent)}%
+                      {isPriced && h.unrealizedPnLPct !== null && h.unrealizedPnL !== null ? (
+                        <div className="flex flex-col items-end gap-0.5">
+                          <SignedPercent pct={h.unrealizedPnLPct} />
+                          <span className="text-[10px] text-muted-foreground font-tabular">
+                            {h.unrealizedPnL >= 0 ? '+' : ''}
+                            {formatCurrency(h.unrealizedPnL, h.currency)}
+                          </span>
                         </div>
                       ) : (
-                        <span className="text-muted-foreground text-xs" title="Pricing arrives in Phase 3">
+                        <span className="text-muted-foreground text-xs" title="Not yet priced">
                           —
                         </span>
                       )}
