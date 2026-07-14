@@ -2,11 +2,12 @@
 
 import React, { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { TrendingUp, Key, Mail, AlertTriangle, Eye, EyeOff, CheckCircle, Info } from 'lucide-react';
+import { TrendingUp, Key, Mail, AlertTriangle, Eye, EyeOff, CheckCircle } from 'lucide-react';
+import { createClient } from '@/utils/supabase/client';
 
 function LoginFormContent() {
-  const [email, setEmail] = useState('abc@g.com');
-  const [password, setPassword] = useState('asdfg');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [isSignUp, setIsSignUp] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -15,9 +16,10 @@ function LoginFormContent() {
 
   const router = useRouter();
   const searchParams = useSearchParams();
+  const supabase = createClient();
 
   useEffect(() => {
-    // Check if error is in URL
+    // Surface callback errors passed via the URL (e.g. from /auth/callback)
     const err = searchParams.get('error');
     if (err) {
       setErrorMessage(err);
@@ -30,26 +32,37 @@ function LoginFormContent() {
     setErrorMessage(null);
     setSuccessMessage(null);
 
-    // Artificial network lag
-    await new Promise((resolve) => setTimeout(resolve, 600));
-
     if (isSignUp) {
-      setErrorMessage('Sign up is disabled for this development build. Please sign in using the demo account details.');
+      // Real Supabase sign-up. Email confirmation is disabled locally (plan 01),
+      // so on success a session is typically active immediately.
+      const { data, error } = await supabase.auth.signUp({ email, password });
+      if (error) {
+        setErrorMessage(error.message);
+        setLoading(false);
+        return;
+      }
+      if (data.session) {
+        // Session active — the proxy will now see a validated session.
+        router.replace('/');
+        router.refresh();
+        return;
+      }
+      // No session (email confirmation enabled) — prompt the user to sign in.
+      setSuccessMessage('Account created. You can now sign in.');
+      setIsSignUp(false);
       setLoading(false);
       return;
     }
 
-    if (email === 'abc@g.com' && password === 'asdfg') {
-      // Set local cookie for Next.js middleware authorization check
-      document.cookie = `foliointel-session=abc@g.com; path=/; max-age=604800; SameSite=Lax`;
-      
-      // Redirect
-      router.replace('/');
-      router.refresh();
-    } else {
-      setErrorMessage('Invalid credentials. Please use the username and password listed below.');
+    // Real Supabase sign-in.
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error) {
+      setErrorMessage(error.message);
       setLoading(false);
+      return;
     }
+    router.replace('/');
+    router.refresh();
   };
 
   return (
@@ -64,16 +77,6 @@ function LoginFormContent() {
         <p className="text-sm text-muted-foreground mt-1.5 text-center">
           Portfolio Intelligence Dashboard
         </p>
-      </div>
-
-      {/* Demo Credentials Banner */}
-      <div className="mb-6 flex items-start gap-2.5 p-3.5 bg-primary/10 border border-primary/20 rounded-xl text-xs text-primary">
-        <Info className="h-4 w-4 shrink-0 mt-0.5" />
-        <div>
-          <p className="font-semibold">Local Demo Account Details</p>
-          <p className="mt-1 font-mono">Username: <span className="underline">abc@g.com</span></p>
-          <p className="font-mono">Password: <span className="underline">asdfg</span></p>
-        </div>
       </div>
 
       <form onSubmit={handleAuth} className="space-y-5">
@@ -103,7 +106,7 @@ function LoginFormContent() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               className="w-full pl-10 pr-4 py-2.5 bg-background/50 border border-border focus:border-primary focus:ring-1 focus:ring-primary rounded-xl text-sm text-foreground outline-none transition-all placeholder:text-muted-foreground/60"
-              placeholder="abc@g.com"
+              placeholder="you@example.com"
             />
           </div>
         </div>
@@ -122,7 +125,7 @@ function LoginFormContent() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               className="w-full pl-10 pr-10 py-2.5 bg-background/50 border border-border focus:border-primary focus:ring-1 focus:ring-primary rounded-xl text-sm text-foreground outline-none transition-all placeholder:text-muted-foreground/60"
-              placeholder="asdfg"
+              placeholder="Your password"
             />
             <button
               type="button"
