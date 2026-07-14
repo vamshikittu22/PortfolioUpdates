@@ -126,7 +126,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Auth + RLS Foundation | 0/4 | Not started | - |
-| 2. Schema + Persistence + Hydration | 4/7 | In Progress|  |
+| 2. Schema + Persistence + Hydration | 5/7 | In Progress|  |
 | 3. Price Pipeline + P&L + Scheduling | 0/6 | Not started | - |
 | 4. CSV Import | 0/TBD | Not started | - |
 | 5. Alerts + Telegram | 0/TBD | Not started | - |
