@@ -53,7 +53,7 @@ type ToastType = 'success' | 'error' | 'info';
 interface Toast { type: ToastType; message: string; detail?: string }
 
 export default function YouTubePage() {
-  const { channels, setChannels } = useChannels();
+  const { channels, addChannel, toggleChannel, removeChannel, error: channelsError } = useChannels();
   const [selectedChannelId, setSelectedChannelId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<FilterTab>('all');
   const [timeFilter, setTimeFilter] = useState<TimeFilter>('30d');
@@ -89,6 +89,14 @@ export default function YouTubePage() {
     setTimeout(() => setToast(null), 5000);
   }, []);
 
+  // Surface channel-list load failures (e.g. no investment account resolved)
+  // instead of silently leaving the panel empty with no explanation.
+  useEffect(() => {
+    if (channelsError) {
+      showToast({ type: 'error', message: 'Could not load channels', detail: channelsError });
+    }
+  }, [channelsError, showToast]);
+
   // ── Channel Handlers ──────────────────────────────────────────────
   const handleAddChannel = useCallback(async (url: string) => {
     setIsResolvingChannel(true);
@@ -107,6 +115,12 @@ export default function YouTubePage() {
       }
 
       const ch = data.channel;
+
+      if (channels.some((c) => c.channel_id === ch.channel_id)) {
+        showToast({ type: 'info', message: `${ch.channel_name} is already tracked` });
+        return;
+      }
+
       const newChannel: YTChannel = {
         channel_id: ch.channel_id,
         channel_name: ch.channel_name,
@@ -117,34 +131,51 @@ export default function YouTubePage() {
         video_count: 0,
       };
 
-      setChannels((prev) => {
-        if (prev.some((c) => c.channel_id === ch.channel_id)) {
-          showToast({ type: 'info', message: `${ch.channel_name} is already tracked` });
-          return prev;
-        }
-        return [...prev, newChannel];
-      });
-
-      showToast({
-        type: 'success',
-        message: `Added ${ch.channel_name}`,
-        detail: `Click "Fetch Videos" to load content`,
-      });
+      try {
+        await addChannel(newChannel);
+        showToast({
+          type: 'success',
+          message: `Added ${ch.channel_name}`,
+          detail: `Click "Fetch Videos" to load content`,
+        });
+      } catch (saveErr) {
+        showToast({
+          type: 'error',
+          message: 'Could not save channel',
+          detail: saveErr instanceof Error ? saveErr.message : undefined,
+        });
+      }
     } catch (err) {
       showToast({ type: 'error', message: 'Network error resolving channel' });
     } finally {
       setIsResolvingChannel(false);
     }
-  }, [showToast]);
+  }, [channels, addChannel, showToast]);
 
-  const handleToggleChannel = useCallback((id: string) => {
-    setChannels((prev) => prev.map((c) => c.channel_id === id ? { ...c, is_active: !c.is_active } : c));
-  }, []);
+  const handleToggleChannel = useCallback(async (id: string) => {
+    try {
+      await toggleChannel(id);
+    } catch (err) {
+      showToast({
+        type: 'error',
+        message: 'Could not update channel',
+        detail: err instanceof Error ? err.message : undefined,
+      });
+    }
+  }, [toggleChannel, showToast]);
 
-  const handleRemoveChannel = useCallback((id: string) => {
-    setChannels((prev) => prev.filter((c) => c.channel_id !== id));
-    if (selectedChannelId === id) setSelectedChannelId(null);
-  }, [selectedChannelId]);
+  const handleRemoveChannel = useCallback(async (id: string) => {
+    try {
+      await removeChannel(id);
+      if (selectedChannelId === id) setSelectedChannelId(null);
+    } catch (err) {
+      showToast({
+        type: 'error',
+        message: 'Could not remove channel',
+        detail: err instanceof Error ? err.message : undefined,
+      });
+    }
+  }, [removeChannel, selectedChannelId, showToast]);
 
   // ── Real Fetch ─────────────────────────────────────────────────────
   const handleScan = useCallback(async () => {
