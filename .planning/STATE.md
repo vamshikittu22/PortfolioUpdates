@@ -10,11 +10,21 @@ See: .planning/PROJECT.md (updated 2026-07-13)
 ## Current Position
 
 Phase: 1 of 7 (Auth + RLS Foundation)
-Plan: 1 of 4 in current phase (01-01 complete)
-Status: In progress — CODE-ONLY / DEFER-VERIFICATION mode (no Docker, no live Supabase)
-Last activity: 2026-07-14 — Completed 01-01-PLAN.md (Supabase config, migrations, RLS write-hole fixes, env scaffolding)
+Plan: 4 of 4 in current phase — all plans CODE-COMPLETE (SUMMARYs written)
+Status: CODE-COMPLETE, VERIFICATION DEFERRED — CODE-ONLY mode (no Docker, no live Supabase). Phase NOT marked verified/complete; runtime gate is blocked on a live DB.
+Last activity: 2026-07-14 — 01-02 (admin client + isolation test), 01-03 (real auth flow), 01-04 (settings 401 gate) all authored + committed. Wave 2 executors were cut off by a session limit (reset 2:40am America/Chicago) + a commit-classifier outage; orchestrator preserved all code, wrote missing SUMMARYs, and fixed a latent tsc error in the isolation test.
 
-Progress: [██░░░░░░░░] 25%
+Progress: [██████████] 100% code authored / 0% runtime-verified
+
+### DEFERRED verification debt (must clear before Phase 1 truly passes)
+Requires a live Supabase (Docker `npx supabase start` OR a hosted project), then:
+1. Apply both migrations against the DB.
+2. Write real anon + service-role keys into `.env.local` (currently PLACEHOLDER_*).
+3. `npm run test:rls` → must print PASS (two-user isolation + price_cache/news_items write-hole proof).
+4. `npx supabase db lint --level warning` → clean on shared tables (Security Advisor).
+5. Browser E2E (plan 01-04 Task 2): sign up → dashboard, logout → /login, login → real email, refresh persists, forged sb-cookie bounces to /login, `curl /api/settings/keys` unauth → 401.
+
+Resume: re-run `/gsd:execute-phase 1` (all SUMMARYs present → it will move to verification) once a DB exists, OR run `/gsd:verify-work 1` after manual testing.
 
 ## Performance Metrics
 
