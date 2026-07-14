@@ -18,9 +18,9 @@ Requirements for this milestone. Each maps to a roadmap phase. Cross-cutting rul
 
 ### Portfolio
 
-- [ ] **PORT-01**: User can add a holding (symbol, exchange, quantity, buy price, buy date) that persists to Supabase
-- [ ] **PORT-02**: User can edit and delete holdings; changes persist across refresh
-- [ ] **PORT-03**: User can add and remove watchlist entries that persist to Supabase
+- [x] **PORT-01**: User can add a holding (symbol, exchange, quantity, buy price, buy date) that persists to Supabase
+- [x] **PORT-02**: User can edit and delete holdings; changes persist across refresh
+- [x] **PORT-03**: User can add and remove watchlist entries that persist to Supabase
 - [x] **PORT-04**: Holdings are derived from a transactions ledger (BUY/SELL entries), so quantity and average cost stay correct after partial sells
 - [x] **PORT-05**: User can record a manual stock split / bonus action that adjusts derived quantity and average cost without showing a false loss
 - [x] **PORT-06**: Every instrument resolves against a symbol master keyed by ISIN + exchange (NSE/BSE/US), with the correct display symbol, currency, and price-source symbol
@@ -117,9 +117,9 @@ Which phases cover which requirements. Populated during roadmap creation (see RO
 | AUTH-04 | Phase 1 | Pending |
 | AUTH-05 | Phase 1 | Pending |
 | AUTH-06 | Phase 1 | Pending |
-| PORT-01 | Phase 2 | Pending |
-| PORT-02 | Phase 2 | Pending |
-| PORT-03 | Phase 2 | Pending |
+| PORT-01 | Phase 2 | Complete |
+| PORT-02 | Phase 2 | Complete |
+| PORT-03 | Phase 2 | Complete |
 | PORT-04 | Phase 2 | Complete |
 | PORT-05 | Phase 2 | Complete |
 | PORT-06 | Phase 2 | Complete |
