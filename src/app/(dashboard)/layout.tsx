@@ -71,8 +71,9 @@ export default function DashboardLayout({
 }) {
   const pathname = usePathname();
   const router = useRouter();
-  const supabase = createClient();
-  
+  // Create the browser client once so effect dependencies stay stable.
+  const [supabase] = useState(() => createClient());
+
   const { theme, toggleTheme, sidebarCollapsed, toggleSidebar } = useAppStore();
   const [userEmail, setUserEmail] = useState<string | null>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -84,28 +85,21 @@ export default function DashboardLayout({
   const selectedAccount = selectedAccountId ? accounts[selectedAccountId] : null;
 
   useEffect(() => {
-    // Get user email
-    const getUser = async () => {
-      try {
-        const match = document.cookie.match(new RegExp('(^| )' + 'foliointel-session' + '=([^;]+)'));
-        if (match) {
-          setUserEmail(decodeURIComponent(match[2]));
-        } else {
-          setUserEmail('abc@g.com');
-        }
-      } catch {
-        setUserEmail('abc@g.com');
-      }
+    // Source the real user email from Supabase Auth (network-revalidated).
+    // No mock fallback — if there is no user, the proxy has already redirected
+    // to /login, so a null/blank email here is acceptable.
+    const loadUser = async () => {
+      const { data } = await supabase.auth.getUser();
+      setUserEmail(data.user?.email ?? null);
     };
-    getUser();
-  }, [pathname]);
+    loadUser();
+  }, [pathname, supabase]);
 
   const handleLogout = async () => {
     try {
-      // Clear cookie
-      document.cookie = "foliointel-session=; path=/; expires=Thu, 01 Jan 1970 00:00:00 UTC;";
+      await supabase.auth.signOut();
     } catch (e) {
-      console.warn("Logout cookie deletion failed:", e);
+      console.warn('Logout failed:', e);
     }
     router.replace('/login');
     router.refresh();
