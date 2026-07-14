@@ -18,42 +18,49 @@ export function AllocationChart({ data }: AllocationChartProps) {
         Allocation
       </h2>
       
-      <div className="flex-1 min-h-[250px] relative">
-        <ResponsiveContainer width="100%" height="100%">
-          <PieChart>
-            <Pie
-              data={data}
-              cx="50%"
-              cy="50%"
-              innerRadius={60}
-              outerRadius={80}
-              paddingAngle={5}
-              dataKey="value"
-              stroke="none"
-            >
-              {data.map((entry, index) => (
-                <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-              ))}
-            </Pie>
-            <Tooltip 
-              contentStyle={{ 
-                backgroundColor: 'rgba(21, 25, 35, 0.9)', 
-                borderColor: 'rgba(255, 255, 255, 0.1)',
-                borderRadius: '0.5rem',
-                color: '#f8fafc'
-              }}
-              itemStyle={{ color: '#f8fafc' }}
-              formatter={(value: any) => [`${value}%`, 'Allocation']}
-            />
-            <Legend 
-              verticalAlign="bottom" 
-              height={36}
-              iconType="circle"
-              wrapperStyle={{ fontSize: '12px' }}
-            />
-          </PieChart>
-        </ResponsiveContainer>
-      </div>
+      {data.length === 0 ? (
+        <div className="flex-1 min-h-[250px] flex flex-col items-center justify-center text-muted-foreground gap-2">
+          <PieChartIcon className="h-8 w-8 opacity-30" />
+          <p className="text-sm font-semibold">No holdings yet</p>
+        </div>
+      ) : (
+        <div className="flex-1 min-h-[250px] relative">
+          <ResponsiveContainer width="100%" height="100%">
+            <PieChart>
+              <Pie
+                data={data}
+                cx="50%"
+                cy="50%"
+                innerRadius={60}
+                outerRadius={80}
+                paddingAngle={5}
+                dataKey="value"
+                stroke="none"
+              >
+                {data.map((entry, index) => (
+                  <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                ))}
+              </Pie>
+              <Tooltip
+                contentStyle={{
+                  backgroundColor: 'rgba(21, 25, 35, 0.9)',
+                  borderColor: 'rgba(255, 255, 255, 0.1)',
+                  borderRadius: '0.5rem',
+                  color: '#f8fafc'
+                }}
+                itemStyle={{ color: '#f8fafc' }}
+                formatter={(value: any) => [`${value}%`, 'Allocation']}
+              />
+              <Legend
+                verticalAlign="bottom"
+                height={36}
+                iconType="circle"
+                wrapperStyle={{ fontSize: '12px' }}
+              />
+            </PieChart>
+          </ResponsiveContainer>
+        </div>
+      )}
     </div>
   );
 }

@@ -1,84 +1,86 @@
-'use client';
-
-import React from 'react';
-import { Wallet, Activity, Bell, MessageSquareQuote } from 'lucide-react';
+import { Wallet, TrendingUp, Briefcase, Eye } from 'lucide-react';
 import { KPICard } from '@/components/dashboard/KPICard';
 import { HoldingsTable } from '@/components/dashboard/HoldingsTable';
 import { AllocationChart } from '@/components/dashboard/AllocationChart';
 import { WatchlistTable } from '@/components/dashboard/WatchlistTable';
 import { NewsFeed } from '@/components/dashboard/NewsFeed';
-import { usePortfolioStore } from '@/store/usePortfolioStore';
+import { createClient } from '@/utils/supabase/server';
+import { getAccountId, getHoldings, getWatchlist } from '@/lib/supabase/portfolio';
 
-export default function DashboardPage() {
-  const { accounts, selectedAccountId } = usePortfolioStore();
-  
-  if (!selectedAccountId) return null;
-  
-  const selectedAccount = accounts[selectedAccountId];
-  const { stats, holdings, allocation, watchlist, news, profile } = selectedAccount;
+// Server Component: hydrates from real persisted data via the wave-2 data
+// access layer (PORT-01..05,07). No price feed exists yet (Phase 3), so
+// every price-dependent KPI is honestly shown as pending, never fabricated.
+export default async function DashboardPage() {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
-  // Format currency based on account setting
-  const currencySymbol = profile.baseCurrency === 'INR' ? '₹' : '$';
-  
-  const totalValueFormatted = new Intl.NumberFormat(profile.baseCurrency === 'INR' ? 'en-IN' : 'en-US', {
+  // Middleware already redirects unauthenticated requests to /login; this is
+  // a defense-in-depth guard, not the primary auth gate.
+  if (!user) return null;
+
+  const accountId = await getAccountId(supabase, user.id);
+  const [holdings, watchlist] = await Promise.all([
+    getHoldings(supabase, accountId),
+    getWatchlist(supabase, accountId),
+  ]);
+
+  // "Total Invested" is cost basis (quantity * avgCost), NOT market value —
+  // there is no live price feed until Phase 3. Note: this naively sums
+  // across currencies without FX conversion (Phase 2 MVP simplification,
+  // same spirit as editHolding/deleteHolding's documented simplifications).
+  const totalInvested = holdings.reduce((sum, h) => sum + h.quantity * h.avgCost, 0);
+  const totalInvestedFormatted = new Intl.NumberFormat('en-IN', {
     style: 'currency',
-    currency: profile.baseCurrency,
-    maximumFractionDigits: 0
-  }).format(stats.totalValue);
+    currency: 'INR',
+    maximumFractionDigits: 0,
+  }).format(totalInvested);
 
-  const dayChangeFormatted = new Intl.NumberFormat(profile.baseCurrency === 'INR' ? 'en-IN' : 'en-US', {
-    style: 'currency',
-    currency: profile.baseCurrency,
-    maximumFractionDigits: 0
-  }).format(stats.dayChangeValue);
+  // Allocation grouped by exchange — the old mock `sector` field doesn't
+  // exist on the real schema. Value is cost basis for that exchange.
+  const allocationByExchange = new Map<string, number>();
+  for (const h of holdings) {
+    const costBasis = h.quantity * h.avgCost;
+    allocationByExchange.set(h.exchange, (allocationByExchange.get(h.exchange) ?? 0) + costBasis);
+  }
+  const allocation = Array.from(allocationByExchange.entries()).map(([name, value]) => ({ name, value }));
 
   return (
     <div className="space-y-6">
-      {/* Row 1: KPI Cards */}
+      {/* Row 1: KPI Cards — only honestly-derivable values pre-Phase-3 */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <KPICard 
-          title="Portfolio Value"
-          value={totalValueFormatted}
+        <KPICard
+          title="Total Invested"
+          value={totalInvestedFormatted}
           icon={<Wallet className="h-4.5 w-4.5" />}
-          trend={{
-            value: `${stats.dayChangePercent >= 0 ? '+' : ''}${stats.dayChangePercent}%`,
-            isPositive: stats.dayChangePercent >= 0,
-          }}
-          subtitle="Updated just now"
+          subtitle="Cost basis, not market value"
         />
-        
-        <KPICard 
-          title="Today's P&L"
-          value={`${stats.dayChangeValue >= 0 ? '+' : ''}${dayChangeFormatted}`}
-          icon={<Activity className="h-4.5 w-4.5" />}
+
+        <KPICard
+          title="Live Pricing"
+          value="—"
+          icon={<TrendingUp className="h-4.5 w-4.5" />}
+          trendIsNeutral
           trend={{
-            value: 'Day',
-            isPositive: stats.dayChangeValue >= 0,
-            label: `Weekly: ${stats.weekChangePercent >= 0 ? '+' : ''}${stats.weekChangePercent}%`
-          }}
-        />
-        
-        <KPICard 
-          title="Watchlist Alerts"
-          value={stats.watchlistAlerts.toString()}
-          icon={<Bell className="h-4.5 w-4.5" />}
-          trend={{
-            value: 'New',
+            value: 'Phase 3',
             isPositive: true,
+            label: 'Price feed not connected yet',
           }}
-          subtitle="Symbols moving > 2%"
         />
-        
-        <KPICard 
-          title="Daily Sentiment"
-          value={`${stats.sentimentSummary.bullish} Bullish`}
-          icon={<MessageSquareQuote className="h-4.5 w-4.5" />}
-          trendIsNeutral={true}
-          trend={{
-            value: 'AI',
-            isPositive: true,
-            label: `${stats.sentimentSummary.bearish} Bearish · ${stats.sentimentSummary.neutral} Neutral`
-          }}
+
+        <KPICard
+          title="Holdings"
+          value={holdings.length.toString()}
+          icon={<Briefcase className="h-4.5 w-4.5" />}
+          subtitle="Positions tracked"
+        />
+
+        <KPICard
+          title="Watchlist"
+          value={watchlist.length.toString()}
+          icon={<Eye className="h-4.5 w-4.5" />}
+          subtitle="Symbols tracked"
         />
       </div>
 
@@ -98,7 +100,9 @@ export default function DashboardPage() {
           <WatchlistTable items={watchlist} />
         </div>
         <div className="xl:col-span-4">
-          <NewsFeed news={news} />
+          {/* News (Phase 6) has no real source yet — NewsFeed already renders
+              a correct honest empty state for zero items. */}
+          <NewsFeed news={[]} />
         </div>
       </div>
     </div>
