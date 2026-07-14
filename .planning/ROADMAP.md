@@ -32,7 +32,11 @@ Decimal phases appear between their surrounding integers in numeric order.
   3. A second user cannot read or write the first user's rows, proven by a passing two-user isolation test.
   4. Scheduled/admin operations run through a dedicated service-role client the browser never receives and a user cookie cannot override.
   5. `/api/settings/keys` rejects unauthenticated requests, and Supabase Security Advisor reports clean.
-**Plans**: TBD
+**Plans**: 4 plans
+- [ ] 01-01-PLAN.md — Local Supabase stack, migrations & RLS write-hole fixes + env wiring
+- [ ] 01-02-PLAN.md — Service-role admin client + two-user RLS isolation test
+- [ ] 01-03-PLAN.md — Real auth flow: proxy migration, login rewrite, logout (mock deleted)
+- [ ] 01-04-PLAN.md — Secure /api/settings/keys + end-to-end auth verification
 
 ### Phase 2: Schema + Persistence + Hydration
 **Goal**: Holdings and watchlist persist as a transactions ledger keyed by correct instrument identity, and the existing UI reads live user data instead of mock.
@@ -108,7 +112,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Auth + RLS Foundation | 0/TBD | Not started | - |
+| 1. Auth + RLS Foundation | 0/4 | Not started | - |
 | 2. Schema + Persistence + Hydration | 0/TBD | Not started | - |
 | 3. Price Pipeline + P&L + Scheduling | 0/TBD | Not started | - |
 | 4. CSV Import | 0/TBD | Not started | - |
