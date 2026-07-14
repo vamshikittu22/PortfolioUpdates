@@ -1,0 +1,130 @@
+# Requirements: PortfolioUpdates (FolioIntel)
+
+**Defined:** 2026-07-13
+**Core Value:** The user opens the app (or gets a Telegram message) and immediately knows what's happening with *their* stocks — real holdings, real prices, real news — without digging through noise.
+
+## v1 Requirements
+
+Requirements for this milestone. Each maps to a roadmap phase. Cross-cutting rule for every feature: **fail loudly with a visible staleness/error state, never silently fall back to mock data — and a feature is not done until its mock module is deleted.**
+
+### Authentication
+
+- [ ] **AUTH-01**: User can sign up and log in with email/password via Supabase Auth (demo cookie login removed)
+- [ ] **AUTH-02**: User session persists across browser refresh and is validated server-side (not just cookie presence)
+- [ ] **AUTH-03**: User can log out from any page, fully clearing the session
+- [ ] **AUTH-04**: Each user's portfolio data is isolated by Row-Level Security — a second user cannot read or write the first user's rows (verified by a two-user isolation test)
+- [ ] **AUTH-05**: Server-side/admin operations (cron jobs) use a dedicated service-role client that is never exposed to the browser and is not overridden by a user cookie session
+- [ ] **AUTH-06**: The unauthenticated `/api/settings/keys` endpoint is secured behind auth (closes existing vulnerability)
+
+### Portfolio
+
+- [ ] **PORT-01**: User can add a holding (symbol, exchange, quantity, buy price, buy date) that persists to Supabase
+- [ ] **PORT-02**: User can edit and delete holdings; changes persist across refresh
+- [ ] **PORT-03**: User can add and remove watchlist entries that persist to Supabase
+- [ ] **PORT-04**: Holdings are derived from a transactions ledger (BUY/SELL entries), so quantity and average cost stay correct after partial sells
+- [ ] **PORT-05**: User can record a manual stock split / bonus action that adjusts derived quantity and average cost without showing a false loss
+- [ ] **PORT-06**: Every instrument resolves against a symbol master keyed by ISIN + exchange (NSE/BSE/US), with the correct display symbol, currency, and price-source symbol
+- [ ] **PORT-07**: Dashboard, holdings, watchlist, and allocation views read persisted user data (mock portfolio store removed)
+
+### Prices & P&L
+
+- [ ] **PRICE-01**: System fetches current prices for all held and watched tickers (NSE `.NS`, BSE `.BO`, and US) from a free source into a shared price cache
+- [ ] **PRICE-02**: Prices auto-refresh every 2–4 hours via a scheduled job (Supabase pg_cron hitting a secret-guarded route)
+- [ ] **PRICE-03**: User can trigger an on-demand "refresh now" that fetches the current live price
+- [ ] **PRICE-04**: Every price display shows an "as of" timestamp / staleness badge; a failed fetch shows stale-with-warning, never a fabricated value
+- [ ] **PRICE-05**: System computes per-holding and total portfolio P&L (unrealized), split into day-change and total-change
+- [ ] **PRICE-06**: P&L is stored in each holding's native currency (INR/USD) and the combined portfolio total is converted at a cached FX rate with the FX effect visible
+- [ ] **PRICE-07**: A >40% overnight price move is flagged as a possible corporate action rather than shown as a large gain/loss
+
+### Import
+
+- [ ] **IMPT-01**: User can import holdings from a Groww export (XLSX) with the rows parsed into transactions
+- [ ] **IMPT-02**: User can import transactions from a Robinhood export (CSV)
+- [ ] **IMPT-03**: Import shows a preview with per-row validation, duplicate detection, and skip/override before committing
+- [ ] **IMPT-04**: Unmatched symbols during import can be mapped to the correct instrument (by ISIN/exchange) rather than silently dropped
+- [ ] **IMPT-05**: Re-importing the same file is idempotent (no duplicate transactions), tracked by an import batch id
+
+### News
+
+- [ ] **NEWS-01**: System fetches news for held and watched tickers from free sources (Finnhub for US; Google News + Indian publisher RSS for NSE/BSE)
+- [ ] **NEWS-02**: News items are deduplicated (by URL and normalized-title hash) and matched to the correct ticker(s) with word-boundary / company-name rules to avoid false positives
+- [ ] **NEWS-03**: User sees a news feed filtered to their portfolio, newest first, with source and timestamp
+- [ ] **NEWS-04**: New matched items are summarized by AI in batches (via `@google/genai`) with a short "why it matters" for the portfolio; summaries persist and are not regenerated
+- [ ] **NEWS-05**: When the AI budget is exhausted, the feed degrades to matched headlines-only rather than failing
+
+### Alerts (Telegram)
+
+- [ ] **ALRT-01**: User can link their Telegram account to the app via a bot `/start` handshake (chat id captured, allowlisted)
+- [ ] **ALRT-02**: User can set price alerts (threshold up/down) per ticker
+- [ ] **ALRT-03**: System sends a Telegram message when a price alert triggers, with a cooldown so it does not repeat every refresh
+- [ ] **ALRT-04**: System sends a Telegram alert when significant news is matched to a held ticker
+- [ ] **ALRT-05**: Notifications are written to an outbox and dispatched separately, so a delivery failure retries on the next run instead of being lost
+
+### Digest
+
+- [ ] **DGST-01**: Once per day, the system composes a portfolio snapshot (total value, day P&L, top movers) plus the day's summarized portfolio news into a single Telegram digest
+- [ ] **DGST-02**: User can enable/disable the daily digest and the digest respects their linked Telegram account
+
+### Existing Modules (wiring)
+
+- [ ] **WIRE-01**: The AI research module is deep-linked from real holdings/watchlist (open research for a held ticker), reading persisted data rather than mock
+- [ ] **WIRE-02**: The YouTube sentiment module remains available and reads the user's persisted channel list
+
+## v2 Requirements
+
+Deferred to a future milestone. Tracked but not in this roadmap.
+
+### Portfolio Analytics
+
+- **ANLY-01**: Dividend tracking (DIVIDEND transaction type — schema should already allow it)
+- **ANLY-02**: Realized P&L and XIRR / time-weighted return
+- **ANLY-03**: Tax-report exports (India FIFO / US lots)
+
+### Notifications
+
+- **NOTF-01**: WhatsApp notifications (requires Meta Business API)
+- **NOTF-02**: Browser push and email digest channels
+- **NOTF-03**: In-app notification center with read/unread state
+
+### Data
+
+- **DATA-01**: Automatic corporate-action adjustment (splits/bonuses/dividends from a feed)
+- **DATA-02**: Additional broker import formats (Zerodha, Upstox, etc.)
+
+## Out of Scope
+
+Explicitly excluded. Documented to prevent scope creep.
+
+| Feature | Reason |
+|---------|--------|
+| Broker API live sync (Kite Connect, Schwab, etc.) | No free/public API for Groww or Robinhood; CSV import covers the need |
+| Real-time / streaming tick prices | Free-resources-only constraint; 2–4h refresh + on-demand is acceptable |
+| Paid market-data feeds | No budget; free sources (Yahoo/Finnhub/RSS) only |
+| Trading / order execution | This is a tracker and intelligence tool, not a trading platform |
+| Mobile native app | Web-first; responsive layout is sufficient |
+| Multi-asset-class net worth (crypto, real estate, etc.) | Stocks-only focus for this milestone |
+| News firehose (all market news) | Portfolio-relevant news only — noise reduction is the point |
+
+## Traceability
+
+Which phases cover which requirements. Populated during roadmap creation.
+
+| Requirement | Phase | Status |
+|-------------|-------|--------|
+| AUTH-01 → AUTH-06 | TBD | Pending |
+| PORT-01 → PORT-07 | TBD | Pending |
+| PRICE-01 → PRICE-07 | TBD | Pending |
+| IMPT-01 → IMPT-05 | TBD | Pending |
+| NEWS-01 → NEWS-05 | TBD | Pending |
+| ALRT-01 → ALRT-05 | TBD | Pending |
+| DGST-01 → DGST-02 | TBD | Pending |
+| WIRE-01 → WIRE-02 | TBD | Pending |
+
+**Coverage:**
+- v1 requirements: 36 total
+- Mapped to phases: 0 (set during roadmap)
+- Unmapped: 36 ⚠️ (resolved by roadmapper)
+
+---
+*Requirements defined: 2026-07-13*
+*Last updated: 2026-07-13 after initial definition*
