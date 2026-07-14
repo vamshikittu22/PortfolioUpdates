@@ -48,7 +48,14 @@ Decimal phases appear between their surrounding integers in numeric order.
   3. User can record a manual split/bonus action that adjusts derived quantity and average cost without showing a false loss.
   4. Every instrument resolves against an ISIN+exchange symbol master with the correct display symbol, currency, and price-source symbol (INFY on NSE vs NYSE are distinct rows).
   5. Dashboard, holdings, watchlist, and allocation views read persisted data with real empty states, the mock portfolio store is deleted, and the research + YouTube modules deep-link from real holdings/watchlist and channel list.
-**Plans**: TBD
+**Plans**: 7 plans
+- [ ] 02-01-PLAN.md — Instruments + transactions schema migrations (ISIN+exchange identity, watchlist re-key, drop legacy holdings, seed data)
+- [ ] 02-02-PLAN.md — Shared domain types + deriveHoldings TDD (weighted-avg-cost ledger math, partial-sell/split/bonus correctness)
+- [ ] 02-03-PLAN.md — WIRE-02: YouTube channel list migrated from localStorage to Supabase yt_channels
+- [ ] 02-04-PLAN.md — Supabase data-access layer + Server Actions (holdings/watchlist reads + mutations)
+- [ ] 02-05-PLAN.md — Dashboard/Holdings/Watchlist/Allocation hydration + Add/Edit/Sell/Split/Bonus/Delete UI
+- [ ] 02-06-PLAN.md — Layout/News/Alerts cleanup, mock store deletion, live-DB verification checkpoint
+- [ ] 02-07-PLAN.md — WIRE-01: Research module deep-linked from real holdings/watchlist
 
 ### Phase 3: Price Pipeline + P&L + Scheduling
 **Goal**: Real prices flow in on a schedule and on demand, driving accurate multi-currency P&L with honest staleness — never a fabricated value.
