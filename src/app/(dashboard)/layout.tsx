@@ -5,7 +5,6 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { createClient } from '@/utils/supabase/client';
 import { useAppStore } from '@/store/useAppStore';
-import { usePortfolioStore } from '@/store/usePortfolioStore';
 import {
   LayoutDashboard,
   Briefcase,
@@ -23,8 +22,6 @@ import {
   ChevronRight,
   TrendingUp,
   User,
-  ChevronDown,
-  Check,
   MoreHorizontal
 } from 'lucide-react';
 
@@ -78,11 +75,14 @@ export default function DashboardLayout({
   const [userEmail, setUserEmail] = useState<string | null>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
-  const [accountDropdownOpen, setAccountDropdownOpen] = useState(false);
   const [mobileMoreOpen, setMobileMoreOpen] = useState(false);
 
-  const { accounts, selectedAccountId, switchAccount } = usePortfolioStore();
-  const selectedAccount = selectedAccountId ? accounts[selectedAccountId] : null;
+  // Phase 2 scope: a single real account per user, auto-created by the
+  // Phase 1 `handle_new_user` trigger — no multi-account switcher (removed
+  // along with the mock portfolio store, PORT-07). Static label keeps this
+  // diff small; a per-account `investment_accounts.name` fetch can be added
+  // later if multi-account support returns.
+  const accountLabel = 'My Portfolio';
 
   useEffect(() => {
     // Source the real user email from Supabase Auth (network-revalidated).
@@ -188,7 +188,7 @@ export default function DashboardLayout({
                   <User className="h-4.5 w-4.5" />
                 </div>
                 <div className="min-w-0">
-                  <p className="text-xs font-bold text-foreground truncate">{selectedAccount ? selectedAccount.profile.name : 'FolioIntel'}</p>
+                  <p className="text-xs font-bold text-foreground truncate">{accountLabel}</p>
                   <p className="text-[10px] text-muted-foreground truncate uppercase tracking-wider font-semibold">Active Portfolio</p>
                 </div>
               </div>
@@ -256,46 +256,8 @@ export default function DashboardLayout({
             </button>
           </div>
 
-          {/* Right Group: Account selector + theme toggle + profile */}
+          {/* Right Group: theme toggle + profile */}
           <div className="flex items-center gap-2 shrink-0">
-            {/* Account Switcher */}
-            <div className="relative hidden md:block">
-              <button
-                onClick={() => setAccountDropdownOpen(!accountDropdownOpen)}
-                className="flex items-center gap-2 px-3 py-1.5 bg-muted/30 border border-border/60 hover:bg-muted/50 rounded-xl text-sm font-semibold transition-colors cursor-pointer"
-              >
-                {selectedAccount ? selectedAccount.profile.name : 'Select Account'}
-                <ChevronDown className="h-4 w-4 text-muted-foreground" />
-              </button>
-              
-              {accountDropdownOpen && (
-                <>
-                  <div className="fixed inset-0 z-30" onClick={() => setAccountDropdownOpen(false)} />
-                  <div className="absolute right-0 mt-2 w-48 bg-card border border-border/80 rounded-xl shadow-lg py-1.5 z-40 animate-in fade-in slide-in-from-top-1">
-                    <div className="px-3 py-1.5 border-b border-border/30 mb-1">
-                      <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Portfolios</p>
-                    </div>
-                    {Object.values(accounts).map((acc) => (
-                      <button
-                        key={acc.accountId}
-                        onClick={() => {
-                          switchAccount(acc.accountId);
-                          setAccountDropdownOpen(false);
-                        }}
-                        className="w-full flex items-center justify-between px-3 py-2 text-sm text-foreground hover:bg-muted/50 transition-colors cursor-pointer text-left"
-                      >
-                        {acc.profile.name}
-                        {selectedAccountId === acc.accountId && <Check className="h-4 w-4 text-primary" />}
-                      </button>
-                    ))}
-                  </div>
-                </>
-              )}
-            </div>
-
-            {/* Separator */}
-            <div className="hidden md:block h-6 w-px bg-border/50" />
-
             {/* Theme Toggle */}
             <button
               onClick={toggleTheme}
@@ -494,7 +456,7 @@ export default function DashboardLayout({
                     <User className="h-4.5 w-4.5" />
                   </div>
                   <div className="min-w-0">
-                    <p className="text-xs font-bold text-foreground truncate">{selectedAccount ? selectedAccount.profile.name : 'FolioIntel'}</p>
+                    <p className="text-xs font-bold text-foreground truncate">{accountLabel}</p>
                     <p className="text-[10px] text-muted-foreground truncate uppercase tracking-wider font-semibold">Active Portfolio</p>
                   </div>
                 </div>
