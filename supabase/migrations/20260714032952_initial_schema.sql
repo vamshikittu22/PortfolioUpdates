@@ -1,7 +1,5 @@
 -- FolioIntel Database Schema (Multi-Account Architecture)
 -- Supabase PostgreSQL
--- NOTE: This file is a human-readable reference only. The canonical, applied source
--- of truth is now the timestamped migrations under supabase/migrations/.
 
 -- Enable UUID extension if not enabled
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
