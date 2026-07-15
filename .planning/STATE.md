@@ -16,18 +16,26 @@ Last activity: 2026-07-14 — 03-05 (getPortfolioPnL glue, StalenessBadge, Refre
 
 Progress: [█████.] ~83% (5/6 plans in Phase 3 code-complete/static-verified: 03-01 schema, 03-02 price/P&L pure logic, 03-03 network wrappers, 03-04 orchestration/route/action, 03-05 Dashboard/Holdings pricing UI — see each plan's own SUMMARY for detail. Only 03-06's live checkpoint remains.)
 
-### DEFERRED verification debt (must clear before Phase 1 and 2 truly pass)
-Requires a live Supabase (Docker `npx supabase start` OR a hosted project), then:
-1. Apply all 5 migrations (2 Phase 1 + 3 Phase 2) against the DB, in order.
-2. Write real anon + service-role keys into `.env.local` (currently PLACEHOLDER_*).
-3. `npm run test:rls` → must print PASS (two-user isolation + price_cache/news_items/transactions/watchlist_items write-hole proof).
-4. `npx supabase db lint --level warning` → clean on shared tables (Security Advisor).
-5. Browser E2E (plan 01-04 Task 2): sign up → dashboard, logout → /login, login → real email, refresh persists, forged sb-cookie bounces to /login, `curl /api/settings/keys` unauth → 401.
-6. Confirm the 16 seed instrument rows insert cleanly and `(isin, exchange)` UNIQUE constraint holds (02-01).
-7. Confirm YouTube channel add/toggle/remove persist against real `yt_channels` rows, survive refresh, and are RLS-isolated per user (02-03).
-8. Confirm `getHoldings`/`getWatchlist`/`searchInstruments` (02-04) return correctly-shaped joined rows against a real DB, and that all 8 Server Action mutations (02-04) succeed, revalidate, and are RLS-rejected for cross-account instrumentId references.
-9. Confirm the full Phase 2 persistence + hydration slice against a live DB (02-06 Task 4, the phase's closing checkpoint): add a holding, refresh survives; partial-sell keeps avg cost unchanged; 2-for-1 split drops avg cost to ~half with NO false-loss indicator; watchlist add/remove reflects live; a second user in incognito sees none of it (RLS).
-10. Confirm clicking a real holding/watchlist row's Research affordance opens `/research?ticker=X` pre-loaded for that ticker in a running browser (02-07) — code/URL-param wiring is statically verified; only the click-through against real seeded rows is deferred.
+### Verification status (rewritten 2026-07-14 after live DB + blocker clearing)
+
+**A live hosted Supabase EXISTS** — project `ozkorwkhtamyaavuphhm`, real credentials in `.env.local` (gitignored). No Docker; Docker is permanently out of scope per user direction.
+
+**CLEARED (genuinely verified against the live DB):**
+1. ✅ The 5 Phase 1 + Phase 2 migrations are APPLIED to the live DB.
+2. ✅ Real anon + service-role keys are in `.env.local` (no placeholders).
+3. ✅ `npm run test:rls` → PASS (cross-user read/write blocked; price_cache/news_items write holes rejected). NOTE: this test was STALE — it referenced the `holdings` table Phase 2 dropped. Rewritten against `transactions`; only found because a live DB finally existed.
+4. ✅ Phase 2 UAT 4/4 PASS (dashboard empty state, add holding, **persistence survives F5** — the headline criterion, watchlist add/remove). Seed instruments + `(isin, exchange)` identity confirmed live: INFY resolves distinctly on NSE and NYSE.
+5. ✅ `npm run test:derive-holdings` 7/7 and `npm run test:price-pnl` 12/12 (pure logic, no DB needed).
+6. ✅ Fabricated-value defects found and fixed: hardcoded Alerts `badge: 3` (3e6d0e5); `MOCK_HOLDINGS` in the YouTube analyze route, which also had NO auth gate (ecf939a).
+7. ✅ FX provider fixed — `exchangerate.host` went key-only; swapped to Frankfurter/ECB (no key). Verified live: USD→INR 96.2, INR→USD 0.01039 (self-consistent), bad currency → honest HTTP 404, never a fabricated rate (bac8107).
+8. ✅ Branch drift resolved — `master` fast-forwarded to contain all work (rollback point: cbf6b19). 66 commits unpushed to origin.
+
+**STILL OPEN:**
+1. ⛔ **Phase 3's two migrations are NOT applied** (`price_fx_schema.sql`, `price_refresh_cron.sql`) — user answered "Don't apply yet" (2026-07-14). Until pushed, `fx_cache` does not exist and `price_cache` is not re-keyed, so NO price refresh can run and Phase 3 is entirely unverified at runtime. Dry-run confirms exactly these 2 would apply and `price_cache` has no rows (re-key is non-destructive).
+2. ⛔ **PRICE-02 (scheduled refresh) is DEPLOY-GATED, not just migration-gated.** `price_refresh_cron.sql` has Supabase's cloud pg_cron POST via pg_net to the refresh endpoint. Supabase's cloud CANNOT reach `localhost:3000`. The 3-hourly schedule can NEVER be verified locally — it requires deploying to a publicly reachable URL (e.g. Vercel) AND setting the DB config for the endpoint URL + `PRICE_REFRESH_SECRET`. Applying the cron migration while only running locally will schedule a job that silently fails every 3 hours. The on-demand "Refresh now" path IS locally verifiable once migrations land.
+3. ⛔ Phase 1 browser auth UAT paused at user direction — 1/7 passed (sign-up→dashboard), 6 outstanding: real email shown, refresh persistence, logout, log back in, forged-cookie rejection, settings 401. NOTE: `/api/settings/keys` 401 and RLS isolation are proven at the API level; only the browser-observable checks are outstanding.
+4. ⛔ `npx supabase db lint --level warning` (Security Advisor) never run against the live DB.
+5. ⛔ Phase 2 UI round-trips never exercised: partial-sell, split/bonus, edit/delete through the dialogs (the underlying math IS proven by unit tests), research deep-link click-through, YouTube channel persistence.
 
 Resume: all 7 plans in Phase 2 (02-01 through 02-07) are now SUMMARY-complete. A live Supabase now exists and the DEFERRED items above involving the 5 Phase 1/2 migrations (test:rls, test:derive-holdings) are confirmed passing against it. Phase 3 is now underway: plan 03-01 (schema) is code-complete; plan 03-02 also has a SUMMARY from a concurrent run. Next: continue Phase 3 plans 03-03 onward, then push the accumulated new migrations (03-01's two files plus any from later plans) to the live DB with explicit user consent before Phase 3's live-verification checkpoint (03-06).
 

@@ -63,7 +63,7 @@ unrelated. One was fixed immediately; one remains open.
   resolution: "Fixed in commit 3e6d0e5 — badge removed, tsc clean, `grep 'badge: 3'` returns nothing."
 
 - truth: "The YouTube module operates on the user's real holdings, not mock data"
-  status: failed
+  status: resolved
   reason: "Orchestrator inspection: src/app/api/youtube/analyze/route.ts imports MOCK_HOLDINGS from src/lib/mock-youtube-data.ts, so the analyze endpoint reasons about fabricated holdings rather than the signed-in user's real positions."
   severity: minor
   test: 4
@@ -76,7 +76,7 @@ unrelated. One was fixed immediately; one remains open.
   missing:
     - "Point the analyze route at real holdings (getHoldings) instead of MOCK_HOLDINGS"
     - "Decide whether mock video data stays until the YouTube/AI phase, or goes now"
-  note: "Left OPEN, not fixed. Scope call: PORT-07/WIRE-02 covered the channel list and the portfolio store; the analyze endpoint is arguably a later YouTube/AI phase concern. Flagged so it is not silently forgotten."
+  resolution: "Fixed 2026-07-14 in commit ecf939a. api/youtube/analyze/route.ts now resolves the signed-in user's real, RLS-scoped holdings via getAccountId + getHoldings and maps them to tickers; the `holdings = MOCK_HOLDINGS` body default is gone. The route also gained a getUser() 401 gate (it previously had NO auth check at all — a second, unnoticed defect). The caller (youtube/page.tsx) no longer sends a client-supplied holdings list, and MOCK_HOLDINGS was deleted from mock-youtube-data.ts. Repo-wide grep now returns only its own removal comment. tsc clean; both test suites still pass. Mock VIDEO/CHANNEL fixtures remain (legitimately deferred to the YouTube/AI phase)."
 
 ## Deferred (still not verified)
 
