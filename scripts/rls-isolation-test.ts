@@ -9,11 +9,13 @@
  * a second user physically cannot read/write the first user's rows even if app code
  * is wrong.
  *
- * It proves four things against the running local Supabase stack:
- *   1. User B cannot READ user A's holdings           → else "RLS read leak"
- *   2. User B cannot WRITE into user A's account       → else "RLS write leak"
- *   3. An authenticated user cannot INSERT price_cache → else "price_cache write hole open"
- *   4. An authenticated user cannot INSERT news_items  → else "news_items write hole open"
+ * It proves the following against the running local Supabase stack:
+ *   1. User B cannot READ user A's holdings                    → else "RLS read leak"
+ *   2. User B cannot WRITE into user A's account                → else "RLS write leak"
+ *   3. An authenticated user cannot INSERT price_cache           → else "price_cache write hole open"
+ *   4. An authenticated user cannot INSERT news_items             → else "news_items write hole open"
+ *   5. User B cannot READ A's import_batches / symbol_mappings   → else "RLS read leak" (Phase 4, 04-01)
+ *   6. User B cannot WRITE import_batches / symbol_mappings into A's account → else "RLS write leak" (Phase 4, 04-01)
  *
  * Checks 3 & 4 are the runnable proof that the plan-01 RLS-fix migration actually took:
  * price_cache / news_items have no per-user column, so before the fix any authenticated
@@ -21,6 +23,11 @@
  * denied, Postgres code 42501). SELECT on both tables must STILL succeed for an
  * authenticated user (the read policies were intentionally kept), so reads are not
  * asserted to fail.
+ *
+ * Checks 5 & 6 extend the same account-ownership RLS proof to the two Phase 4 (CSV
+ * import) tables added in 04-01's migration: import_batches and symbol_mappings use
+ * the identical EXISTS-subquery policy shape as transactions, so owner-writes must
+ * succeed and cross-user reads/writes must be rejected exactly like transactions.
  *
  * On success: prints PASS and exits 0. On any failure: throws and exits non-zero.
  * Do NOT weaken this test to make it pass — a failure means the RLS fixes did not take;
@@ -180,7 +187,72 @@ async function main(): Promise<void> {
   const { error: newsReadErr } = await a.from('news_items').select('id').limit(1)
   if (newsReadErr) throw new Error(`FAIL: authenticated read of news_items broke: ${newsReadErr.message}`)
 
-  console.log('PASS: cross-user read/write blocked and price_cache/news_items writes rejected')
+  // ── Phase 4 (04-01): import_batches + symbol_mappings two-user isolation ──
+  // Same account-ownership RLS shape as transactions: owner can write, a second user
+  // can neither read nor write. A owns instr (INFY/NSE resolved above).
+
+  // A inserts one import_batches row and one symbol_mappings row for A's own account.
+  // These MUST succeed — proves the account-ownership INSERT policy admits the owner.
+  const { data: batchA, error: batchInsErr } = await a
+    .from('import_batches')
+    .insert({
+      account_id: acctA.id,
+      broker: 'groww',
+      file_name: 'rls-test.csv',
+      file_hash: 'rls-test-hash-' + Date.now(),
+      row_count: 1,
+    })
+    .select('id')
+    .single()
+  if (batchInsErr || !batchA) {
+    throw new Error(`FAIL: user A could not insert own import_batches row: ${batchInsErr?.message}`)
+  }
+
+  const { data: mappingA, error: mappingInsErr } = await a
+    .from('symbol_mappings')
+    .insert({
+      account_id: acctA.id,
+      broker: 'groww',
+      broker_symbol: 'RLSTEST',
+      instrument_id: instr.id,
+    })
+    .select('id')
+    .single()
+  if (mappingInsErr || !mappingA) {
+    throw new Error(`FAIL: user A could not insert own symbol_mappings row: ${mappingInsErr?.message}`)
+  }
+
+  // 5. RLS read isolation — B must NOT see A's import_batches / symbol_mappings rows.
+  const { data: batchLeak } = await b.from('import_batches').select('*').eq('id', batchA.id)
+  if ((batchLeak?.length ?? 0) !== 0) {
+    throw new Error('FAIL: RLS read leak — B can read A import_batches')
+  }
+  const { data: mappingLeak } = await b.from('symbol_mappings').select('*').eq('id', mappingA.id)
+  if ((mappingLeak?.length ?? 0) !== 0) {
+    throw new Error('FAIL: RLS read leak — B can read A symbol_mappings')
+  }
+
+  // 6. RLS write isolation — B must NOT be able to insert rows carrying A's account_id.
+  const { error: batchWriteErr } = await b.from('import_batches').insert({
+    account_id: acctA.id,
+    broker: 'groww',
+    file_name: 'rls-write-leak.csv',
+    file_hash: 'rls-write-leak-hash-' + Date.now(),
+    row_count: 1,
+  })
+  if (!batchWriteErr) throw new Error('FAIL: RLS write leak — B wrote import_batches into A account')
+
+  const { error: mappingWriteErr } = await b.from('symbol_mappings').insert({
+    account_id: acctA.id,
+    broker: 'groww',
+    broker_symbol: 'RLSWRITELEAK',
+    instrument_id: instr.id,
+  })
+  if (!mappingWriteErr) throw new Error('FAIL: RLS write leak — B wrote symbol_mappings into A account')
+
+  console.log(
+    'PASS: cross-user read/write blocked (transactions, import_batches, symbol_mappings) and price_cache/news_items writes rejected'
+  )
   process.exit(0)
 }
 
