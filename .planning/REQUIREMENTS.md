@@ -25,6 +25,8 @@ Requirements for this milestone. Each maps to a roadmap phase. Cross-cutting rul
 - [x] **PORT-05**: User can record a manual stock split / bonus action that adjusts derived quantity and average cost without showing a false loss
 - [x] **PORT-06**: Every instrument resolves against a symbol master keyed by ISIN + exchange (NSE/BSE/US), with the correct display symbol, currency, and price-source symbol
 - [x] **PORT-07**: Dashboard, holdings, watchlist, and allocation views read persisted user data (mock portfolio store removed)
+- [ ] **PORT-08**: User can see each holding's individual buy lots (transaction date, quantity, and the price actually paid) separately from the derived average cost
+- [ ] **PORT-09**: Editing or deleting a lot affects only that transaction — other BUY lots and all SELL/SPLIT/BONUS rows survive, and average cost recomputes from the surviving ledger
 
 ### Prices & P&L
 
@@ -38,11 +40,11 @@ Requirements for this milestone. Each maps to a roadmap phase. Cross-cutting rul
 
 ### Import
 
-- [ ] **IMPT-01**: User can import holdings from a Groww export (XLSX) with the rows parsed into transactions
-- [ ] **IMPT-02**: User can import transactions from a Robinhood export (CSV)
+- [x] **IMPT-01**: User can import holdings from a Groww export (XLSX) with the rows parsed into transactions
+- [x] **IMPT-02**: User can import transactions from a Robinhood export (CSV)
 - [ ] **IMPT-03**: Import shows a preview with per-row validation, duplicate detection, and skip/override before committing
-- [ ] **IMPT-04**: Unmatched symbols during import can be mapped to the correct instrument (by ISIN/exchange) rather than silently dropped
-- [ ] **IMPT-05**: Re-importing the same file is idempotent (no duplicate transactions), tracked by an import batch id
+- [x] **IMPT-04**: Unmatched symbols during import can be mapped to the correct instrument (by ISIN/exchange) rather than silently dropped
+- [x] **IMPT-05**: Re-importing the same file is idempotent (no duplicate transactions), tracked by an import batch id
 
 ### News
 
@@ -118,12 +120,14 @@ Which phases cover which requirements. Populated during roadmap creation (see RO
 | AUTH-05 | Phase 1 | Pending |
 | AUTH-06 | Phase 1 | Pending |
 | PORT-01 | Phase 2 | Complete |
-| PORT-02 | Phase 2 | Complete |
+| PORT-02 | Phase 2 | Complete (edit-holding is destructive — superseded by PORT-09) |
 | PORT-03 | Phase 2 | Complete |
 | PORT-04 | Phase 2 | Complete |
 | PORT-05 | Phase 2 | Complete |
 | PORT-06 | Phase 2 | Complete |
 | PORT-07 | Phase 2 | Complete |
+| PORT-08 | Phase 3.1 | Pending |
+| PORT-09 | Phase 3.1 | Pending |
 | WIRE-01 | Phase 2 | Complete |
 | WIRE-02 | Phase 2 | Complete |
 | PRICE-01 | Phase 3 | Complete |
@@ -133,11 +137,11 @@ Which phases cover which requirements. Populated during roadmap creation (see RO
 | PRICE-05 | Phase 3 | Complete |
 | PRICE-06 | Phase 3 | Complete |
 | PRICE-07 | Phase 3 | Complete |
-| IMPT-01 | Phase 4 | Pending |
-| IMPT-02 | Phase 4 | Pending |
+| IMPT-01 | Phase 4 | Complete |
+| IMPT-02 | Phase 4 | Complete |
 | IMPT-03 | Phase 4 | Pending |
-| IMPT-04 | Phase 4 | Pending |
-| IMPT-05 | Phase 4 | Pending |
+| IMPT-04 | Phase 4 | Complete |
+| IMPT-05 | Phase 4 | Complete |
 | ALRT-01 | Phase 5 | Pending |
 | ALRT-02 | Phase 5 | Pending |
 | ALRT-03 | Phase 5 | Pending |
