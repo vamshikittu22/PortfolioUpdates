@@ -15,15 +15,35 @@ interface StalenessBadgeProps {
   className?: string;
 }
 
+// Display locale/timezone are PINNED, not left to the runtime default.
+//
+// This badge is server-rendered and then hydrated. `toLocaleString(undefined, …)`
+// resolves to the *runtime's* default locale, which differs between Node and the
+// browser — the server produced "Jul 15, 12:01 AM" while the browser produced
+// "15 Jul, 12:01 am", causing a React hydration mismatch on every page load
+// (verified live 2026-07-15). React then discarded the server HTML for this
+// subtree and re-rendered it on the client.
+//
+// Pinning the locale alone is NOT sufficient: in production the server runs UTC
+// (e.g. Vercel) while the browser is IST, so the *time* would still disagree.
+// Both must be fixed for SSR output to be deterministic.
+//
+// IST/en-IN is the correct choice for this product, not an arbitrary one: the
+// portfolio is INR-based and the tracked markets are NSE/BSE. Change both
+// constants together if that ever stops being true.
+const DISPLAY_LOCALE = 'en-IN';
+const DISPLAY_TIME_ZONE = 'Asia/Kolkata';
+
 function formatAsOf(asOf: string | null): string | null {
   if (!asOf) return null;
   const date = new Date(asOf);
   if (Number.isNaN(date.getTime())) return null;
-  return date.toLocaleString(undefined, {
+  return date.toLocaleString(DISPLAY_LOCALE, {
     month: 'short',
     day: 'numeric',
     hour: '2-digit',
     minute: '2-digit',
+    timeZone: DISPLAY_TIME_ZONE,
   });
 }
 
