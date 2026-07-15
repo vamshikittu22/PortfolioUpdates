@@ -78,6 +78,42 @@ unrelated. One was fixed immediately; one remains open.
     - "Decide whether mock video data stays until the YouTube/AI phase, or goes now"
   resolution: "Fixed 2026-07-14 in commit ecf939a. api/youtube/analyze/route.ts now resolves the signed-in user's real, RLS-scoped holdings via getAccountId + getHoldings and maps them to tickers; the `holdings = MOCK_HOLDINGS` body default is gone. The route also gained a getUser() 401 gate (it previously had NO auth check at all — a second, unnoticed defect). The caller (youtube/page.tsx) no longer sends a client-supplied holdings list, and MOCK_HOLDINGS was deleted from mock-youtube-data.ts. Repo-wide grep now returns only its own removal comment. tsc clean; both test suites still pass. Mock VIDEO/CHANNEL fixtures remain (legitimately deferred to the YouTube/AI phase)."
 
+## Follow-up: 2026-07-15 Phase 1-3 live review (external agent, reported by user)
+
+The reviewer passed Phase 3 (real prices visible, P&L math independently correct)
+and listed 5 "non-blocking observations". Orchestrator investigation found TWO of
+them were real defects, both since fixed. Recording the pattern: this is the
+SECOND review where an item filed as "unrelated / dev artifact / natural
+enhancement" turned out to be a genuine bug. Observations dismissed without
+inspection are not evidence of absence.
+
+- truth: "No fabricated or mismatched values are rendered to the user"
+  status: resolved
+  reason: "Reviewer: '1 Issue red badge at bottom-left ... appears to be a Next.js dev overlay indicator, not a user-facing error ... it's a dev-mode artifact.'"
+  severity: minor
+  root_cause: "NOT a dev artifact. A real React hydration error firing on every page load: StalenessBadge used toLocaleString(undefined, ...), which resolves to the RUNTIME's default locale. Server rendered 'Jul 15, 12:01 AM'; browser rendered '15 Jul, 12:01 am'. React discarded the server HTML for that subtree and re-rendered client-side. Pinning locale alone would still break in production, where the server runs UTC (Vercel) and the browser is IST — timezone had to be pinned too."
+  artifacts:
+    - path: "src/components/dashboard/StalenessBadge.tsx"
+      issue: "toLocaleString(undefined, ...) — non-deterministic across server/client"
+  resolution: "Fixed in a8872a9 — DISPLAY_LOCALE='en-IN' + DISPLAY_TIME_ZONE='Asia/Kolkata' (correct for an INR/NSE product, not arbitrary). Verified: 0 hydration errors after reload."
+
+- truth: "Held AND WATCHED tickers show real prices with an 'as of' timestamp (Phase 3 success criterion 1)"
+  status: resolved
+  reason: "Reviewer: watchlist prices still show em-dash — 'a natural Phase 3+ enhancement, not a bug'."
+  severity: major
+  root_cause: "It was a gap against Phase 3's own success criterion, not a future enhancement. Nuance: PRICE-01 as literally worded ('system FETCHES ... into a shared price cache') WAS met — refresh-service already fetched watchlist instruments and AAPL's price was sitting in price_cache. But the roadmap's Phase 3 criterion 1 says held and watched tickers SHOW real prices. getWatchlist never joined price_cache and WatchlistTable hardcoded an em-dash behind a now-stale comment ('no live feed until Phase 3' — we were IN Phase 3)."
+  artifacts:
+    - path: "src/lib/supabase/portfolio.ts"
+      issue: "getWatchlist did not join price_cache"
+    - path: "src/components/dashboard/WatchlistTable.tsx"
+      issue: "hardcoded em-dash + stale 'until Phase 3' comment"
+  resolution: "Fixed in the 03-05 watchlist commit — added getPricedWatchlist + PricedWatchlistItem reusing the SAME computeStaleness and a shared readPriceCache helper (so holdings/watchlist can never disagree about 'stale'), extracted formatCurrency to src/utils/format.ts instead of duplicating it, and wired Dashboard + News. Verified live: AAPL price=317.31 USD, chg=+0.63%, staleness=fresh, asOf=2026-07-15T06:21:08Z. Null price still renders an honest em-dash, never 0."
+
+Reviewer observations that were correct and need no action: Day P&L is computed
+on current market value (standard); staleness thresholds (30min/6h) match the ~3h
+cadence; Actions column is present but clipped at narrow viewports (cosmetic,
+open).
+
 ## Deferred (still not verified)
 
 Not covered by this UAT — the tester exercised add/persist/watchlist only:
