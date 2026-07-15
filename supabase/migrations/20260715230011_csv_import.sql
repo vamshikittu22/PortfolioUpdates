@@ -83,3 +83,73 @@ CREATE UNIQUE INDEX IF NOT EXISTS uniq_transactions_import_row_hash
 -- orphan-batch compensation edge case (batch row written, transaction insert failed
 -- then rolled back) and adds nothing the row constraint doesn't already guarantee.
 -- The file hash powers only the "this exact file was imported on DATE" banner.
+
+-- ── find_or_create_instrument: controlled write path into the closed instruments table ──
+-- The instruments migration deliberately creates NO authenticated write policy (writes
+-- are service-role only) and 04-RESEARCH forbids the admin client in import Server
+-- Actions (Phase 2 discipline). A SECURITY DEFINER function is the standard Supabase
+-- pattern for exactly this: it runs as the function owner (bypassing RLS for its single,
+-- validated insert) while the caller stays an ordinary authenticated user. It validates
+-- every input against the same CHECK domains the table enforces, derives
+-- price_source_symbol by the seed-data / Phase-3 Yahoo convention, and is idempotent via
+-- ON CONFLICT (isin, exchange). This is a controlled write path, NOT a permissive policy —
+-- the table's RLS posture stays closed.
+CREATE OR REPLACE FUNCTION public.find_or_create_instrument(
+    p_isin TEXT,
+    p_symbol TEXT,
+    p_exchange TEXT,
+    p_display_name TEXT,
+    p_currency TEXT
+) RETURNS UUID
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    v_id UUID;
+    v_price_source_symbol TEXT;
+BEGIN
+    -- Validate inputs against the instruments table's own CHECK domains — fail loudly,
+    -- never fabricate. ISIN is the project's hardest-to-reverse identity decision.
+    IF p_isin !~ '^[A-Z]{2}[A-Z0-9]{9}[0-9]$' THEN
+        RAISE EXCEPTION 'Invalid ISIN: %', p_isin;
+    END IF;
+    IF p_exchange NOT IN ('NSE','BSE','NASDAQ','NYSE','OTHER') THEN
+        RAISE EXCEPTION 'Invalid exchange: %', p_exchange;
+    END IF;
+    IF p_currency NOT IN ('INR','USD') THEN
+        RAISE EXCEPTION 'Invalid currency: %', p_currency;
+    END IF;
+
+    -- Already present? Return it (idempotent; handles the dual-listing (isin,exchange) key).
+    SELECT id INTO v_id FROM public.instruments WHERE isin = p_isin AND exchange = p_exchange;
+    IF v_id IS NOT NULL THEN
+        RETURN v_id;
+    END IF;
+
+    -- Derive price_source_symbol by the same convention as the seed data / Phase 3:
+    --   NSE → SYMBOL.NS,  BSE → SYMBOL.BO,  US (NASDAQ/NYSE/OTHER) → SYMBOL
+    v_price_source_symbol := CASE p_exchange
+        WHEN 'NSE' THEN p_symbol || '.NS'
+        WHEN 'BSE' THEN p_symbol || '.BO'
+        ELSE p_symbol
+    END;
+
+    INSERT INTO public.instruments (isin, symbol, exchange, display_name, asset_type, currency, price_source_symbol)
+    VALUES (p_isin, p_symbol, p_exchange, p_display_name, 'stocks', p_currency, v_price_source_symbol)
+    ON CONFLICT (isin, exchange) DO NOTHING
+    RETURNING id INTO v_id;
+
+    -- ON CONFLICT DO NOTHING skips RETURNING when a concurrent insert won the race — re-read.
+    IF v_id IS NULL THEN
+        SELECT id INTO v_id FROM public.instruments WHERE isin = p_isin AND exchange = p_exchange;
+    END IF;
+
+    RETURN v_id;
+END;
+$$;
+
+-- Only authenticated users may call it; PUBLIC (anon) may not. The function's own body
+-- is the trust boundary — it will only ever insert a fully-validated instrument row.
+REVOKE ALL ON FUNCTION public.find_or_create_instrument(TEXT,TEXT,TEXT,TEXT,TEXT) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.find_or_create_instrument(TEXT,TEXT,TEXT,TEXT,TEXT) TO authenticated;
