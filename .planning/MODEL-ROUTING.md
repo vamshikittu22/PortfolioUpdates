@@ -53,7 +53,22 @@ Rules:
 
 ## 2. Model by GSD phase
 
-Current profile: **`budget`** (`.planning/config.json`) — set 2026-07-14 at the user's explicit direction to conserve tokens. Note this **departs from §7's stated default (`balanced`)** and, per §7, contradicts this section's Opus-planning rule: under `budget` the planner resolves to **sonnet**, not opus, and researchers/checkers/verifier drop to **haiku**. The "resolves to (balanced)" column below is therefore NOT what runs today — see §7's `budget` column for actual resolution.
+Current profile: **`budget`** (`.planning/config.json`) — set 2026-07-14 at the user's explicit direction to conserve tokens. The "resolves to (balanced)" column below is NOT what runs today.
+
+> ### ⚠ STANDING SPAWN-TIME OVERRIDE (2026-07-14)
+>
+> **Research always runs on `fable`. Planning always runs on `opus`.** This overrides the `budget` profile and restores this section's Opus-planning rule. Execution/verification stay on `budget`.
+>
+> | Agent | Actual model | Source |
+> | --- | --- | --- |
+> | gsd-phase-researcher, gsd-project-researcher | **fable** | override |
+> | gsd-planner, gsd-roadmapper | **opus** | override |
+> | gsd-executor, gsd-debugger | sonnet | budget |
+> | gsd-verifier, gsd-plan-checker, mappers | haiku | budget |
+>
+> **This is NOT configurable — do not try to express it in `config.json`.** Verified in `gsd-tools.cjs`: workflows resolve via `init` → `resolveModelInternal` (~L808), which never reads `model_overrides` (only `cmdResolveModel` ~L4046 does, and no workflow calls it). No `MODEL_PROFILES` row contains `fable`, and `opus` is rewritten to `inherit`. §3's "no agent spawn can reach Fable" is therefore true *of config* — but an orchestrator CAN pass `model="fable"` directly on the Task/Agent spawn, which is how this override is enforced.
+>
+> **Enforcement:** the orchestrator ignores `researcher_model` / `planner_model` from `gsd-tools init` and passes `model=` explicitly. If a future planning/research run shows sonnet or haiku, this override was missed.
 
 | Phase | Real GSD agent | Resolves to (balanced — NOT current) | Policy intent |
 |---|---|---|---|
