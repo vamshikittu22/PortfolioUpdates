@@ -57,7 +57,31 @@ result: [pending]
 
 ### 7. Settings Endpoint Gated (401)
 expected: With no session (private window, or after logout), visiting http://localhost:3000/api/settings/keys returns HTTP 401 / an unauthorized response — not the provider-flags JSON.
-result: [pending]
+result: pass
+note: |
+  FOUND A REAL BUG, then fixed it (commit cb21967). First live curl returned
+  HTTP 307 (redirect to /login), NOT 401 — so AUTH-06's stated criterion was
+  never actually met, and 01-04-SUMMARY's claim that the gate returns 401 was
+  wrong in practice. Cause: proxy.ts matched ALL non-static paths including
+  /api/*, and redirected unauthenticated requests to /login before the route's
+  getUser() 401 gate could ever execute. The gate was effectively dead code.
+
+  Severity was higher than a wrong status code: /api/prices/refresh is guarded
+  by a BEARER SECRET (pg_cron has no cookie), and it was 307'd to /login even
+  WITH the correct secret. Once deployed, the 3-hourly scheduled refresh
+  (PRICE-02) would have silently never run, surfacing no error.
+
+  Fix: proxy.ts now skips the login redirect for /api/* (session refresh still
+  applies); each route enforces its own auth. This matches proxy.ts's own stated
+  contract ("OPTIMISTIC check only — real authorization lives at the data layer").
+
+  Verified live after fix:
+    /api/settings/keys        unauth         -> 401
+    /api/youtube/analyze      unauth         -> 401
+    /api/prices/refresh       wrong secret   -> 401
+    /api/prices/refresh       correct secret -> 200 {"succeeded":2,"fxUpdated":true}
+    /holdings                 unauth         -> 307 -> /login (pages still redirect)
+  tsc clean; test:rls and test:price-pnl still pass.
 
 ## Summary
 
