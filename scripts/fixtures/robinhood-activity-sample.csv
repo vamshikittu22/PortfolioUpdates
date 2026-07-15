@@ -1,0 +1,8 @@
+"Activity Date","Process Date","Settle Date","Instrument","Description","Trans Code","Quantity","Price","Amount"
+"9/18/2023","9/20/2023","9/20/2023","AAPL","Apple Inc","Buy","5","150.25","$751.25"
+"10/2/2023","10/4/2023","10/4/2023","AAPL","Apple Inc","Sell","2","155.50","$311.00"
+"11/1/2023","11/1/2023","11/1/2023","AAPL","Apple Inc","SPL","3","","$0.00"
+"12/1/2023","12/1/2023","12/1/2023","AAPL","Apple Inc","CDIV","","","$4.60"
+"1/15/2024","1/17/2024","1/17/2024","VOO","Vanguard S&P 500 ETF","Buy","0.123456","410.00","$50.62"
+"2/1/2024","2/1/2024","2/1/2024","","","DFEE","","","($5.00)"
+The activity statement is provided for informational purposes only and is not a substitute for your official account records.
