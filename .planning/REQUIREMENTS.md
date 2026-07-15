@@ -42,7 +42,7 @@ Requirements for this milestone. Each maps to a roadmap phase. Cross-cutting rul
 
 - [x] **IMPT-01**: User can import holdings from a Groww export (XLSX) with the rows parsed into transactions
 - [x] **IMPT-02**: User can import transactions from a Robinhood export (CSV)
-- [ ] **IMPT-03**: Import shows a preview with per-row validation, duplicate detection, and skip/override before committing
+- [x] **IMPT-03**: Import shows a preview with per-row validation, duplicate detection, and skip/override before committing
 - [x] **IMPT-04**: Unmatched symbols during import can be mapped to the correct instrument (by ISIN/exchange) rather than silently dropped
 - [x] **IMPT-05**: Re-importing the same file is idempotent (no duplicate transactions), tracked by an import batch id
 
@@ -139,7 +139,7 @@ Which phases cover which requirements. Populated during roadmap creation (see RO
 | PRICE-07 | Phase 3 | Complete |
 | IMPT-01 | Phase 4 | Complete |
 | IMPT-02 | Phase 4 | Complete |
-| IMPT-03 | Phase 4 | Pending |
+| IMPT-03 | Phase 4 | Complete |
 | IMPT-04 | Phase 4 | Complete |
 | IMPT-05 | Phase 4 | Complete |
 | ALRT-01 | Phase 5 | Pending |
