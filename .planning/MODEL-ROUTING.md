@@ -53,9 +53,9 @@ Rules:
 
 ## 2. Model by GSD phase
 
-Current profile: **`balanced`** (`.planning/config.json`). The "resolves to" column is what that profile actually produces today.
+Current profile: **`budget`** (`.planning/config.json`) — set 2026-07-14 at the user's explicit direction to conserve tokens. Note this **departs from §7's stated default (`balanced`)** and, per §7, contradicts this section's Opus-planning rule: under `budget` the planner resolves to **sonnet**, not opus, and researchers/checkers/verifier drop to **haiku**. The "resolves to (balanced)" column below is therefore NOT what runs today — see §7's `budget` column for actual resolution.
 
-| Phase | Real GSD agent | Resolves to (balanced) | Policy intent |
+| Phase | Real GSD agent | Resolves to (balanced — NOT current) | Policy intent |
 |---|---|---|---|
 | Research | `gsd-phase-researcher`, `gsd-project-researcher` | sonnet | Sonnet default |
 | Research synthesis | `gsd-research-synthesizer` | sonnet | Sonnet |
@@ -173,7 +173,7 @@ Hard bans:
 
 These are GSD's three real `model_profile` values, not a parallel vocabulary. Set via `.planning/config.json` (or `/gsd:set-profile`).
 
-| Agent | `quality` | `balanced` ← current | `budget` |
+| Agent | `quality` | `balanced` | `budget` ← current |
 |---|---|---|---|
 | gsd-planner | opus | **opus** | sonnet |
 | gsd-roadmapper | opus | sonnet | sonnet |
@@ -187,9 +187,9 @@ These are GSD's three real `model_profile` values, not a parallel vocabulary. Se
 | gsd-plan-checker | sonnet | sonnet | haiku |
 | gsd-integration-checker | sonnet | sonnet | haiku |
 
-- **`balanced`** — the default for this project. Matches the policy in §1–2.
+- **`balanced`** — the documented default for this project. Matches the policy in §1–2. **Not currently active.**
 - **`quality`** — high-risk systems (auth, data integrity). Opus for research/planning/coding/debugging. Materially more expensive per phase.
-- **`budget`** — Sonnet/Haiku throughout, planner drops to Sonnet. Contradicts §2's Opus-planning rule; use only when cost dominates correctness.
+- **`budget`** ← **CURRENTLY ACTIVE** (set 2026-07-14 at the user's explicit direction, to conserve tokens). Sonnet/Haiku throughout, planner drops to Sonnet. Contradicts §2's Opus-planning rule; use only when cost dominates correctness. Phases 2 and 3 were planned under this profile and both passed plan-check on the first iteration.
 
 Remember `opus` → `inherit`, so a `quality` profile on a Sonnet session buys nothing.
 
