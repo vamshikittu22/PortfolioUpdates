@@ -84,7 +84,14 @@ Decimal phases appear between their surrounding integers in numeric order.
   2. Import shows a preview with per-row validation, duplicate detection, and skip/override before anything is committed.
   3. Unmatched symbols can be mapped to the correct instrument by ISIN/exchange rather than being silently dropped.
   4. Re-importing the same file adds no duplicate transactions (idempotent via an import batch id), and imported holdings immediately reflect live P&L.
-**Plans**: TBD
+**Plans**: 7 plans
+- [ ] 04-01-PLAN.md — Schema: import_batches + symbol_mappings + transactions provenance columns + partial unique index + find_or_create_instrument RPC + RLS test extension
+- [ ] 04-02-PLAN.md — TDD: parsing primitives (types, normalize, row-hash, broker detection) + xlsx/papaparse deps
+- [ ] 04-03-PLAN.md — TDD: Groww/Robinhood parsers + instrument matching + duplicate detection (synthetic fixtures)
+- [ ] 04-04-PLAN.md — previewImport/commitImport Server Actions (server-side parse, atomic idempotent write) + body-size config
+- [ ] 04-05-PLAN.md — Import UI leaf components: dropzone, preview table (bulk toggles), resolve-symbols, result summary
+- [ ] 04-06-PLAN.md — /import progressive page shell + container state machine + Holdings entry point
+- [ ] 04-07-PLAN.md — Live checkpoint: real-file fixtures + end-to-end import verification (idempotency, mapping, live P&L)
 
 ### Phase 5: Alerts + Telegram
 **Goal**: Users receive reliable per-ticker price alerts on Telegram through a retryable outbox that later phases reuse.
@@ -128,7 +135,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
 | 1. Auth + RLS Foundation | 0/4 | Not started | - |
 | 2. Schema + Persistence + Hydration | 7/7 | Complete   | 2026-07-14 |
 | 3. Price Pipeline + P&L + Scheduling | 6/6 | Complete   | 2026-07-15 |
-| 4. CSV Import | 0/TBD | Not started | - |
+| 4. CSV Import | 0/7 | Not started | - |
 | 5. Alerts + Telegram | 0/TBD | Not started | - |
 | 6. News Pipeline + Summarization | 0/TBD | Not started | - |
 | 7. Daily Digest | 0/TBD | Not started | - |
