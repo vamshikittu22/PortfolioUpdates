@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { Briefcase, Pencil, TrendingDown, GitBranch, Gift, Trash2, Search, AlertTriangle } from 'lucide-react';
 import type { PricedHolding } from '@/lib/prices/get-portfolio-pnl';
 import { cn } from '@/utils/cn';
+import { formatCurrency } from '@/utils/format';
 import { HoldingFormDialog } from './HoldingFormDialog';
 import { StalenessBadge } from './StalenessBadge';
 import { deleteHolding } from '@/server-actions/portfolio';
@@ -13,13 +14,7 @@ interface HoldingsTableProps {
   holdings: PricedHolding[];
 }
 
-const formatCurrency = (value: number, currency: PricedHolding['currency']) => {
-  return new Intl.NumberFormat(currency === 'INR' ? 'en-IN' : 'en-US', {
-    style: 'currency',
-    currency,
-    maximumFractionDigits: 2,
-  }).format(value);
-};
+// Moved to src/utils/format.ts so WatchlistTable renders prices identically.
 
 const EXCHANGE_STYLES: Record<PricedHolding['exchange'], string> = {
   NSE: 'bg-blue-500/10 text-blue-500 border-blue-500/20',

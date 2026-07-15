@@ -2,7 +2,8 @@ import { Newspaper, Filter, Settings2 } from 'lucide-react';
 import { NewsFeed } from '@/components/dashboard/NewsFeed';
 import { WatchlistTable } from '@/components/dashboard/WatchlistTable';
 import { createClient } from '@/utils/supabase/server';
-import { getAccountId, getWatchlist } from '@/lib/supabase/portfolio';
+import { getAccountId } from '@/lib/supabase/portfolio';
+import { getPricedWatchlist } from '@/lib/prices/get-portfolio-pnl';
 
 // Server Component: same real-data pattern as the dashboard/holdings pages
 // (PORT-01..05,07) — fetches the REAL persisted watchlist via getWatchlist,
@@ -26,7 +27,7 @@ export default async function NewsPage() {
   if (!user) return null;
 
   const accountId = await getAccountId(supabase, user.id);
-  const watchlist = await getWatchlist(supabase, accountId);
+  const watchlist = await getPricedWatchlist(supabase, accountId);
 
   return (
     <div className="space-y-5 max-w-6xl mx-auto">

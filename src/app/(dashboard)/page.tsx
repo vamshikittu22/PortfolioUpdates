@@ -5,8 +5,8 @@ import { AllocationChart } from '@/components/dashboard/AllocationChart';
 import { WatchlistTable } from '@/components/dashboard/WatchlistTable';
 import { NewsFeed } from '@/components/dashboard/NewsFeed';
 import { createClient } from '@/utils/supabase/server';
-import { getAccountId, getWatchlist } from '@/lib/supabase/portfolio';
-import { getPortfolioPnL } from '@/lib/prices/get-portfolio-pnl';
+import { getAccountId } from '@/lib/supabase/portfolio';
+import { getPortfolioPnL, getPricedWatchlist } from '@/lib/prices/get-portfolio-pnl';
 import type { Currency } from '@/lib/types';
 
 // Server Component: hydrates from real persisted data via the wave-2 data
@@ -37,7 +37,7 @@ export default async function DashboardPage() {
 
   const [{ holdings, portfolioTotal, fxRate, fxUnavailable }, watchlist] = await Promise.all([
     getPortfolioPnL(supabase, accountId, baseCurrency),
-    getWatchlist(supabase, accountId),
+    getPricedWatchlist(supabase, accountId),
   ]);
 
   const anyPriced = holdings.some((h) => h.status === 'priced');

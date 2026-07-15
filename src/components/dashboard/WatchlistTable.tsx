@@ -3,13 +3,15 @@
 import React, { useState, useTransition } from 'react';
 import Link from 'next/link';
 import { Eye, MessageSquare, Plus, X, Search } from 'lucide-react';
-import type { WatchlistItem } from '@/lib/types';
+import type { PricedWatchlistItem } from '@/lib/prices/get-portfolio-pnl';
 import { cn } from '@/utils/cn';
+import { formatCurrency } from '@/utils/format';
+import { StalenessBadge } from './StalenessBadge';
 import { WatchlistFormDialog } from './WatchlistFormDialog';
 import { removeFromWatchlist } from '@/server-actions/portfolio';
 
 interface WatchlistTableProps {
-  items: WatchlistItem[];
+  items: PricedWatchlistItem[];
 }
 
 export function WatchlistTable({ items }: WatchlistTableProps) {
@@ -91,14 +93,36 @@ export function WatchlistTable({ items }: WatchlistTableProps) {
                     </div>
                   </td>
 
-                  {/* Price — no live feed until Phase 3, an honest em-dash */}
+                  {/* Price — real cached price + staleness (PRICE-01: held AND
+                      watched tickers show real prices with an "as of" time).
+                      Still an honest em-dash when never fetched; never a 0. */}
                   <td className="px-5 py-4 text-right">
-                    <div
-                      className="font-tabular font-semibold text-muted-foreground text-sm tabular-nums"
-                      title="Pricing arrives in Phase 3"
-                    >
-                      —
-                    </div>
+                    {item.price === null ? (
+                      <div
+                        className="font-tabular font-semibold text-muted-foreground text-sm tabular-nums"
+                        title="No price fetched yet"
+                      >
+                        —
+                      </div>
+                    ) : (
+                      <div className="flex flex-col items-end gap-0.5">
+                        <span className="font-tabular font-semibold text-sm tabular-nums">
+                          {formatCurrency(item.price, item.currency)}
+                        </span>
+                        {item.changePct !== null && (
+                          <span
+                            className={cn(
+                              'text-[11px] font-semibold tabular-nums',
+                              item.changePct < 0 ? 'text-danger' : 'text-success'
+                            )}
+                          >
+                            {item.changePct >= 0 ? '+' : ''}
+                            {item.changePct.toFixed(2)}%
+                          </span>
+                        )}
+                        <StalenessBadge staleness={item.staleness} />
+                      </div>
+                    )}
                   </td>
 
                   {/* Sentiment badge + news count — optional until Phase 6 */}

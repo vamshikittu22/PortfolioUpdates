@@ -10,8 +10,8 @@
  */
 
 import type { SupabaseClient } from '@supabase/supabase-js';
-import type { Currency, Holding } from '@/lib/types';
-import { getHoldings } from '@/lib/supabase/portfolio';
+import type { Currency, Holding, WatchlistItem } from '@/lib/types';
+import { getHoldings, getWatchlist } from '@/lib/supabase/portfolio';
 import {
   calculateHoldingPnL,
   calculatePortfolioTotals,
@@ -37,6 +37,26 @@ export type PricedHolding = Holding &
     staleness: StalenessInfo;
     corporateActionFlag: boolean;
   };
+
+/**
+ * A watchlist row carrying its cached price, exactly like a held instrument.
+ *
+ * Phase 3's success criterion 1 is "held AND WATCHED tickers show real prices
+ * ... each with an 'as of' timestamp". The refresh service already fetches
+ * watchlist instruments (03-04 discovers ids from transactions AND
+ * watchlist_items), so the price was already in price_cache — the watchlist UI
+ * simply never read it and rendered a permanent em-dash. Found during the
+ * 2026-07-15 live review.
+ *
+ * No P&L here, deliberately: a watched instrument has no quantity or cost
+ * basis, so day-change % is meaningful but "total return" is not.
+ */
+export interface PricedWatchlistItem extends WatchlistItem {
+  price: number | null;
+  changePct: number | null;
+  staleness: StalenessInfo;
+  corporateActionFlag: boolean;
+}
 
 export interface PortfolioPnLResult {
   holdings: PricedHolding[];
@@ -73,6 +93,59 @@ interface PriceCacheRow {
 const FRESH_MS = 30 * 60 * 1000; // 30 min
 const STALE_MS = 6 * 60 * 60 * 1000; // 6h (~2 missed 3h cycles)
 
+/**
+ * Single price_cache read used by BOTH the holdings P&L path and the watchlist
+ * path, so the two can never drift into different column sets or error
+ * handling. Returns rows keyed by instrument_id.
+ */
+async function readPriceCache(
+  supabase: SupabaseClient,
+  instrumentIds: string[]
+): Promise<Map<string, PriceCacheRow>> {
+  if (instrumentIds.length === 0) return new Map();
+
+  const { data, error } = await supabase
+    .from('price_cache')
+    .select('instrument_id, price, change_pct, updated_at, fetch_error, corporate_action_flag')
+    .in('instrument_id', instrumentIds);
+  if (error) throw new Error(`Failed to load price cache: ${error.message}`);
+
+  return new Map((data ?? []).map((r) => [(r as PriceCacheRow).instrument_id, r as PriceCacheRow]));
+}
+
+/**
+ * getPricedWatchlist — watchlist rows joined to their cached prices
+ * (Phase 3 success criterion 1, "held AND watched tickers show real prices").
+ *
+ * Read-only, so the caller's cookie-bound RLS-scoped client is correct here;
+ * no admin client. Reuses computeStaleness so the watchlist badge can never
+ * disagree with the holdings badge about what "stale" means.
+ */
+export async function getPricedWatchlist(
+  supabase: SupabaseClient,
+  accountId: string
+): Promise<PricedWatchlistItem[]> {
+  const items = await getWatchlist(supabase, accountId);
+  const priceById = await readPriceCache(
+    supabase,
+    items.map((i) => i.instrumentId)
+  );
+  const now = Date.now();
+
+  return items.map((item) => {
+    const row = priceById.get(item.instrumentId);
+    return {
+      ...item,
+      // null (not 0) when never fetched — the UI renders an em-dash, never a
+      // fabricated price.
+      price: row?.price ?? null,
+      changePct: row?.change_pct ?? null,
+      staleness: computeStaleness(row, now),
+      corporateActionFlag: row?.corporate_action_flag ?? false,
+    };
+  });
+}
+
 function computeStaleness(row: PriceCacheRow | undefined, now: number): StalenessInfo {
   if (!row) return { level: 'pending', asOf: null };
 
@@ -101,15 +174,9 @@ export async function getPortfolioPnL(
   const holdings = await getHoldings(supabase, accountId);
   const instrumentIds = holdings.map((h) => h.instrumentId);
 
-  let priceRows: PriceCacheRow[] = [];
-  if (instrumentIds.length > 0) {
-    const { data, error } = await supabase
-      .from('price_cache')
-      .select('instrument_id, price, change_pct, updated_at, fetch_error, corporate_action_flag')
-      .in('instrument_id', instrumentIds);
-    if (error) throw new Error(`Failed to load price cache: ${error.message}`);
-    priceRows = (data ?? []) as PriceCacheRow[];
-  }
+  const priceRows: PriceCacheRow[] = Array.from(
+    (await readPriceCache(supabase, instrumentIds)).values()
+  );
 
   // Single row for the one FX pair this app tracks today. maybeSingle (not
   // single) because the row may genuinely not exist yet (pre-migration, or
