@@ -14,7 +14,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 - [ ] **Phase 1: Auth + RLS Foundation** - Real Supabase auth with verified per-user data isolation, demo cookie deleted
 - [x] **Phase 2: Schema + Persistence + Hydration** - Transactions-ledger schema, ISIN+exchange symbol master, holdings/watchlist persisted, UI reads real data (completed 2026-07-14)
-- [ ] **Phase 3: Price Pipeline + P&L + Scheduling** - Free-source prices on a 2–4h schedule + on-demand, multi-currency P&L with honest staleness
+- [x] **Phase 3: Price Pipeline + P&L + Scheduling** - Free-source prices on a 2–4h schedule + on-demand, multi-currency P&L with honest staleness (completed 2026-07-15)
 - [ ] **Phase 4: CSV Import** - Idempotent Groww XLSX + Robinhood CSV import with preview and symbol mapping
 - [ ] **Phase 5: Alerts + Telegram** - Telegram link handshake, per-ticker price alerts, retryable notifications outbox
 - [ ] **Phase 6: News Pipeline + Summarization** - Portfolio-matched, deduped, AI-summarized news feed + significant-news alerts
@@ -127,7 +127,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
 |-------|----------------|--------|-----------|
 | 1. Auth + RLS Foundation | 0/4 | Not started | - |
 | 2. Schema + Persistence + Hydration | 7/7 | Complete   | 2026-07-14 |
-| 3. Price Pipeline + P&L + Scheduling | 5/6 | In Progress|  |
+| 3. Price Pipeline + P&L + Scheduling | 6/6 | Complete   | 2026-07-15 |
 | 4. CSV Import | 0/TBD | Not started | - |
 | 5. Alerts + Telegram | 0/TBD | Not started | - |
 | 6. News Pipeline + Summarization | 0/TBD | Not started | - |
