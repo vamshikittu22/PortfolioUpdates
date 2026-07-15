@@ -3,6 +3,26 @@
 // cell is a row validation failure the caller must surface, not silently
 // coerce (04-RESEARCH Anti-Patterns: "this project's cardinal sin").
 
+/** A plain non-negative decimal after all broker punctuation has been stripped. */
+const PLAIN_DECIMAL = /^\d+(\.\d+)?$/;
+
+/**
+ * Shared string-cleaning for money/quantity cells: trim, strip thousands
+ * commas, strip a leading `$`, strip enclosing parentheses. Returns the
+ * cleaned string plus whether parentheses were present (money's negative
+ * signal — meaningless for quantity, which ignores the flag).
+ */
+function stripBrokerPunctuation(raw: string): { cleaned: string; wasParenthesized: boolean } {
+  const s = raw.trim();
+  const wasParenthesized = /^\(.*\)$/.test(s);
+  const cleaned = s
+    .replace(/^\(|\)$/g, '')
+    .replace(/^\$/, '')
+    .replace(/,/g, '')
+    .trim();
+  return { cleaned, wasParenthesized };
+}
+
 /**
  * Parse a broker money cell (`$1,234.50`, `($43.64)`, blank, or `—`).
  * Parentheses mean negative; `$` prefix and thousands commas are stripped.
@@ -11,21 +31,15 @@
  */
 export function parseMoney(raw: string | null): number | null {
   if (raw == null) return null;
-  const s = raw.trim();
-  if (s === '' || s === '—' || s === '-') return null;
+  const trimmed = raw.trim();
+  if (trimmed === '' || trimmed === '—' || trimmed === '-') return null;
 
-  const negative = /^\(.*\)$/.test(s);
-  const cleaned = s
-    .replace(/^\(|\)$/g, '')
-    .replace(/^\$/, '')
-    .replace(/,/g, '')
-    .trim();
-
-  if (!/^\d+(\.\d+)?$/.test(cleaned)) return null;
+  const { cleaned, wasParenthesized } = stripBrokerPunctuation(trimmed);
+  if (!PLAIN_DECIMAL.test(cleaned)) return null;
 
   const n = Number(cleaned);
   if (!Number.isFinite(n)) return null;
-  return negative ? -n : n;
+  return wasParenthesized ? -n : n;
 }
 
 /**
@@ -36,11 +50,10 @@ export function parseMoney(raw: string | null): number | null {
  */
 export function parseQuantity(raw: string | null): number | null {
   if (raw == null) return null;
-  const s = raw.trim().replace(/,/g, '');
-  if (s === '') return null;
-  if (!/^\d+(\.\d+)?$/.test(s)) return null;
+  const { cleaned } = stripBrokerPunctuation(raw);
+  if (cleaned === '' || !PLAIN_DECIMAL.test(cleaned)) return null;
 
-  const n = Number(s);
+  const n = Number(cleaned);
   if (!Number.isFinite(n) || n <= 0) return null;
   return n;
 }
