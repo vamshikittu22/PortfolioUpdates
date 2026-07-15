@@ -30,7 +30,11 @@ export interface YTVideo {
   affects_portfolio: string[]; // cross-referenced from mock holdings
 }
 
-export const MOCK_HOLDINGS = ['TCS', 'INFY', 'RELIANCE', 'BTC', 'ETH', 'AAPL'];
+// MOCK_HOLDINGS removed (2026-07-14): the YouTube analyze route now resolves the
+// signed-in user's real, RLS-scoped holdings. Cross-referencing video tickers
+// against a fabricated portfolio produced "affects your portfolio" claims about
+// positions the user does not own. Mock VIDEO/CHANNEL fixtures below remain until
+// the YouTube/AI phase replaces them with live data.
 
 export const MOCK_CHANNELS: YTChannel[] = [
   {

@@ -11,7 +11,7 @@ import { ChannelPanel } from '@/components/youtube/ChannelPanel';
 import { VideoInsightCard } from '@/components/youtube/VideoInsightCard';
 import { YouTubeEmptyState } from '@/components/youtube/EmptyState';
 import {
-  MOCK_CHANNELS, MOCK_VIDEOS, MOCK_HOLDINGS,
+  MOCK_CHANNELS, MOCK_VIDEOS,
   type YTChannel, type YTVideo,
 } from '@/lib/mock-youtube-data';
 import { groupByWeek, type LiveVideo } from '@/lib/youtube-types';
@@ -237,11 +237,13 @@ export default function YouTubePage() {
       const res = await fetch('/api/youtube/analyze', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          video_id: videoId, 
-          title, 
-          channel_name: channelName, 
-          holdings: MOCK_HOLDINGS,
+        body: JSON.stringify({
+          video_id: videoId,
+          title,
+          channel_name: channelName,
+          // holdings intentionally NOT sent — the route resolves the signed-in
+          // user's real, RLS-scoped holdings server-side. A client-supplied list
+          // could not be trusted anyway.
           ai_provider: settings.preferredProvider,
           ai_api_key: settings.keys[settings.preferredProvider]
         }),

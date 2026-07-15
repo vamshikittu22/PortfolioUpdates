@@ -3,7 +3,26 @@ import { fetchTranscript, truncateTranscript } from '@/lib/transcript';
 import { analyzeTranscriptWithProvider } from '@/lib/ai-provider';
 import { crossReferenceHoldings } from '@/lib/gemini';
 import { extractTickers } from '@/lib/ticker-extractor';
-import { MOCK_HOLDINGS } from '@/lib/mock-youtube-data';
+import { createClient } from '@/utils/supabase/server';
+import { getAccountId, getHoldings } from '@/lib/supabase/portfolio';
+
+/**
+ * Resolves the signed-in user's real holding tickers for cross-referencing.
+ * Returns null when there is no authenticated user.
+ * Never falls back to mock tickers — a fabricated portfolio would produce
+ * "affects your portfolio" claims about positions the user does not own.
+ */
+async function getUserTickers(): Promise<string[] | null> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return null;
+
+  const accountId = await getAccountId(supabase, user.id);
+  const holdings = await getHoldings(supabase, accountId);
+  return holdings.map((h) => h.ticker);
+}
 
 export async function POST(request: Request) {
   const hasGeminiKey =
@@ -12,10 +31,16 @@ export async function POST(request: Request) {
 
   try {
     const body = await request.json();
-    const { video_id, title, channel_name, holdings = MOCK_HOLDINGS, ai_provider = 'gemini', ai_api_key } = body;
+    const { video_id, title, channel_name, ai_provider = 'gemini', ai_api_key } = body;
 
     if (!video_id) {
       return NextResponse.json({ success: false, error: 'video_id is required' }, { status: 400 });
+    }
+
+    // Cross-reference against the user's REAL holdings (RLS-scoped), never MOCK_HOLDINGS.
+    const holdings = await getUserTickers();
+    if (holdings === null) {
+      return new Response(null, { status: 401 });
     }
 
     const transcriptResult = await fetchTranscript(video_id);
