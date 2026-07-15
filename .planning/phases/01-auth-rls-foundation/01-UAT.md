@@ -86,15 +86,20 @@ note: |
 ## Summary
 
 total: 7
-passed: 1
+passed: 2
 issues: 0
-pending: 6
+pending: 5
 skipped: 0
 
-Tests 2-7 (real email shown, refresh persistence, logout, log back in, forged
-cookie rejection, settings 401) are NOT yet exercised — paused, not passed.
+Test 1 (sign up → dashboard) and Test 7 (settings 401) PASS. Test 7 only passes
+because it EXPOSED a real bug that was then fixed — see its note: the proxy was
+307-redirecting all /api/* requests, so AUTH-06's 401 never fired and the
+secret-guarded pg_cron refresh endpoint was unreachable even with a valid secret.
+
+Tests 2-6 (real email shown, refresh persistence, logout, log back in, forged
+cookie rejection) are NOT yet exercised — paused, not passed.
 The automated RLS isolation proof for this phase does pass (see Environment
-Notes above); the browser-observable auth checks remain outstanding.
+Notes above); the remaining browser-observable auth checks are outstanding.
 
 ## Gaps
 
