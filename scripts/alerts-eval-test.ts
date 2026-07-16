@@ -1,7 +1,8 @@
 /**
- * ALRT-02 / ALRT-03 — pure-function correctness proof for the alert
+ * ALRT-02 / ALRT-03 / ALRT-05 — pure-function correctness proof for the alert
  * evaluation core: `evaluateAlerts` (level+cooldown trigger rule, null/failed
- * price exclusion, strict direction boundaries).
+ * price exclusion, strict direction boundaries) and `computeAlertDedupeKey`
+ * (the cooldown-window bucket key backing idempotent enqueue).
  *
  * Run:  npx tsx scripts/alerts-eval-test.ts
  * (Once 05-02 registers it: npm run test:alerts)
@@ -15,7 +16,7 @@
  * implementation is wrong; fix evaluate.ts instead.
  */
 import assert from 'node:assert/strict';
-import { evaluateAlerts, isCooldownElapsed } from '../src/lib/alerts/evaluate';
+import { evaluateAlerts, isCooldownElapsed, computeAlertDedupeKey } from '../src/lib/alerts/evaluate';
 import type { AlertEvalRow, PriceSnapshot } from '../src/lib/alerts/types';
 
 const NOW = new Date('2026-07-16T12:00:00Z');
@@ -212,6 +213,41 @@ function testMultipleAlertsAcrossInstruments(): void {
   assert.equal(byId.get('fires-2'), 40);
 }
 
+// --- Case 12: computeAlertDedupeKey format ---
+function testComputeAlertDedupeKeyFormat(): void {
+  const alert = makeAlert({ id: 'alert-format', cooldownMinutes: 1440 });
+  const key = computeAlertDedupeKey(alert, NOW);
+  const expectedBucket = Math.floor(NOW.getTime() / 1000 / (1440 * 60));
+  assert.equal(key, `price_alert:alert-format:${expectedBucket}`, 'Case 12: dedupe key must be price_alert:{id}:{bucket}');
+}
+
+// --- Case 13: same alert, two `now`s inside the same cooldown window → identical key ---
+function testComputeAlertDedupeKeySameWindow(): void {
+  const alert = makeAlert({ id: 'alert-same-window', cooldownMinutes: 1440 });
+  const keyA = computeAlertDedupeKey(alert, NOW);
+  const fiveMinutesLater = new Date(NOW.getTime() + 5 * 60_000);
+  const keyB = computeAlertDedupeKey(alert, fiveMinutesLater);
+  assert.equal(keyA, keyB, 'Case 13: two calls inside the same cooldown window must produce an identical key (crash-recovery dedupe)');
+}
+
+// --- Case 14: `now` in the NEXT window (advance by cooldown_minutes) → a different key ---
+function testComputeAlertDedupeKeyNextWindow(): void {
+  const alert = makeAlert({ id: 'alert-next-window', cooldownMinutes: 1440 });
+  const keyA = computeAlertDedupeKey(alert, NOW);
+  const nextWindow = new Date(NOW.getTime() + 1440 * 60_000);
+  const keyB = computeAlertDedupeKey(alert, nextWindow);
+  assert.notEqual(keyA, keyB, 'Case 14: a now in the next cooldown window must produce a different key (next legitimate fire allowed)');
+}
+
+// --- Case 15: different alert ids → different keys at the same instant ---
+function testComputeAlertDedupeKeyDifferentAlerts(): void {
+  const alertA = makeAlert({ id: 'alert-x', cooldownMinutes: 1440 });
+  const alertB = makeAlert({ id: 'alert-y', cooldownMinutes: 1440 });
+  const keyA = computeAlertDedupeKey(alertA, NOW);
+  const keyB = computeAlertDedupeKey(alertB, NOW);
+  assert.notEqual(keyA, keyB, 'Case 15: different alert ids must produce different keys at the same instant');
+}
+
 function main(): void {
   testAboveFiresWhenPriceExceedsThreshold();
   testAboveDoesNotFireAtExactThreshold();
@@ -224,8 +260,12 @@ function main(): void {
   testFetchErrorNeverFires();
   testMissingPriceMapEntryNeverFires();
   testMultipleAlertsAcrossInstruments();
+  testComputeAlertDedupeKeyFormat();
+  testComputeAlertDedupeKeySameWindow();
+  testComputeAlertDedupeKeyNextWindow();
+  testComputeAlertDedupeKeyDifferentAlerts();
 
-  console.log('PASS: alerts-eval — all 11 case groups passed (evaluateAlerts level+cooldown trigger rule, null/failed-price exclusion, strict direction boundaries)');
+  console.log('PASS: alerts-eval — all 15 case groups passed (evaluateAlerts level+cooldown trigger rule, null/failed-price exclusion, strict direction boundaries, computeAlertDedupeKey cooldown-window bucket)');
   process.exit(0);
 }
 
