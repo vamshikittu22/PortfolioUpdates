@@ -32,18 +32,6 @@ export interface Transaction {
   notes?: string | null;
 }
 
-// One raw ledger transaction as shown in a holding's expanded lot list
-// (PORT-08). This is the persisted BUY/SELL/SPLIT/BONUS row itself — the price
-// actually paid on a given date — as opposed to the derived `avgCost` on
-// Holding, which is never stored and is recomputed from these lots.
-export interface HoldingLot {
-  id: string;
-  transactionType: TransactionType;
-  quantity: number;
-  price: number | null; // null for SPLIT/BONUS (no cash flow)
-  transactionDate: string; // ISO date
-}
-
 // Derived (not persisted) — the output of deriveHoldings(), enriched with
 // instrument display data by the data layer (plan 02-04).
 export interface Holding {
@@ -54,10 +42,6 @@ export interface Holding {
   currency: Currency;
   quantity: number;
   avgCost: number;
-  // The individual buy/sell/split/bonus lots this holding was derived from,
-  // in chronological order (PORT-08). `avgCost` above is the derived average;
-  // these are the separate per-date prices actually paid.
-  lots: HoldingLot[];
   // Pricing fields intentionally absent/optional — Phase 3 (PRICE-*) fills these.
   // The UI must show an honest "pending" state, never a fabricated number.
   currentPrice?: number;
