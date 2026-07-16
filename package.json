@@ -11,7 +11,9 @@
     "test:derive-holdings": "tsx scripts/derive-holdings-test.ts",
     "test:price-pnl": "tsx scripts/price-pnl-test.ts",
     "test:import-primitives": "tsx scripts/import-primitives-test.ts",
-    "test:import-parse": "tsx scripts/import-parse-test.ts"
+    "test:import-parse": "tsx scripts/import-parse-test.ts",
+    "test:telegram": "tsx scripts/telegram-logic-test.ts",
+    "test:alerts": "tsx scripts/alerts-eval-test.ts"
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
