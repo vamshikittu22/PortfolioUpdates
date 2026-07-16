@@ -16,6 +16,9 @@
  *   4. An authenticated user cannot INSERT news_items             → else "news_items write hole open"
  *   5. User B cannot READ A's import_batches / symbol_mappings   → else "RLS read leak" (Phase 4, 04-01)
  *   6. User B cannot WRITE import_batches / symbol_mappings into A's account → else "RLS write leak" (Phase 4, 04-01)
+ *   7. User B cannot READ/WRITE A's price_alerts                 → else "RLS read/write leak" (Phase 5, 05-01)
+ *   8. Nobody (not even the owner) can UPDATE telegram_links via the anon key → else "allowlist closure broken" (Phase 5, 05-01)
+ *   9. An authenticated user cannot INSERT notifications_outbox   → else "notifications_outbox write hole open" (Phase 5, 05-01)
  *
  * Checks 3 & 4 are the runnable proof that the plan-01 RLS-fix migration actually took:
  * price_cache / news_items have no per-user column, so before the fix any authenticated
@@ -28,6 +31,13 @@
  * import) tables added in 04-01's migration: import_batches and symbol_mappings use
  * the identical EXISTS-subquery policy shape as transactions, so owner-writes must
  * succeed and cross-user reads/writes must be rejected exactly like transactions.
+ *
+ * Checks 7-9 extend coverage to the three Phase 5 (05-01) tables: price_alerts is
+ * account-owned like transactions (owner-write succeeds, cross-user read/write
+ * rejected); telegram_links has NO authenticated UPDATE policy at all — that closure
+ * IS the allowlist boundary (ALRT-01), so even the OWNER's own update must affect
+ * zero rows, not just a stranger's; notifications_outbox has no authenticated INSERT
+ * policy — writes are service-role only (ALRT-05).
  *
  * On success: prints PASS and exits 0. On any failure: throws and exits non-zero.
  * Do NOT weaken this test to make it pass — a failure means the RLS fixes did not take;
@@ -250,8 +260,108 @@ async function main(): Promise<void> {
   })
   if (!mappingWriteErr) throw new Error('FAIL: RLS write leak — B wrote symbol_mappings into A account')
 
+  // ── Phase 5 (05-01): price_alerts + telegram_links + notifications_outbox ──
+  // price_alerts is account-owned like transactions/import_batches (owner-write CRUD via
+  // the cookie client, cross-user reads/writes rejected). telegram_links and
+  // notifications_outbox instead prove CLOSED write postures — not ownership CRUD, but
+  // structural closure (no policy exists for the operation, for ANY authenticated role).
+
+  // A inserts one price_alert for A's own account — MUST succeed (owner-write proof).
+  const { data: alertA, error: alertInsErr } = await a
+    .from('price_alerts')
+    .insert({
+      account_id: acctA.id,
+      instrument_id: instr.id,
+      direction: 'above',
+      threshold: 1,
+      cooldown_minutes: 60,
+    })
+    .select('id')
+    .single()
+  if (alertInsErr || !alertA) {
+    throw new Error(`FAIL: user A could not insert own price_alert: ${alertInsErr?.message}`)
+  }
+
+  // 7a. RLS read isolation — B must NOT see A's price_alerts row.
+  const { data: alertLeak } = await b.from('price_alerts').select('*').eq('id', alertA.id)
+  if ((alertLeak?.length ?? 0) !== 0) {
+    throw new Error('FAIL: RLS read leak — B can read A price_alerts')
+  }
+
+  // 7b. RLS write isolation — B must NOT be able to insert a price_alert carrying A's account_id.
+  const { error: alertWriteErr } = await b.from('price_alerts').insert({
+    account_id: acctA.id,
+    instrument_id: instr.id,
+    direction: 'below',
+    threshold: 1,
+    cooldown_minutes: 60,
+  })
+  if (!alertWriteErr) throw new Error('FAIL: RLS write leak — B wrote price_alerts into A account')
+
+  // ── telegram_links: user-keyed, closed-UPDATE allowlist posture (ALRT-01) ──
+  const { data: userAResp } = await a.auth.getUser()
+  const userIdA = userAResp.user?.id
+  if (!userIdA) throw new Error('FAIL: could not resolve user A id for telegram_links test')
+
+  // A inserts a pending link for themselves — MUST succeed (owner-insert proof).
+  const { error: linkInsErr } = await a.from('telegram_links').insert({
+    user_id: userIdA,
+    link_token: `rls-test-token-${stamp}-a`,
+    token_expires_at: new Date(Date.now() + 3600_000).toISOString(),
+  })
+  if (linkInsErr) {
+    throw new Error(`FAIL: user A could not insert own telegram_links row: ${linkInsErr.message}`)
+  }
+
+  // 8a. RLS read isolation — B must NOT see A's telegram_links row.
+  const { data: linkLeak } = await b.from('telegram_links').select('*').eq('user_id', userIdA)
+  if ((linkLeak?.length ?? 0) !== 0) {
+    throw new Error('FAIL: RLS read leak — B can read A telegram_links')
+  }
+
+  // 8b. Allowlist-closure proof: B attempting to set chat_id/status='linked' on A's link
+  //     MUST affect ZERO rows — there is NO authenticated UPDATE policy for anyone, so
+  //     this is not an ownership check, it's structural closure. A nonzero effect means
+  //     a user could point their alerts at an arbitrary chat_id — hard failure.
+  const { data: updByB } = await b
+    .from('telegram_links')
+    .update({ chat_id: 999999, status: 'linked' })
+    .eq('user_id', userIdA)
+    .select()
+  if ((updByB?.length ?? 0) !== 0) {
+    throw new Error('FAIL: telegram_links allowlist closure broken — B updated A telegram_links row')
+  }
+
+  // 8c. Same closure applies to the OWNER too — A updating their OWN link's chat_id must
+  //     ALSO affect zero rows (no UPDATE policy exists for anyone). Only the service role
+  //     can complete the handshake (chat_id/status='linked'); a re-link is DELETE + INSERT.
+  const { data: updByA } = await a
+    .from('telegram_links')
+    .update({ chat_id: 111111, status: 'linked' })
+    .eq('user_id', userIdA)
+    .select()
+  if ((updByA?.length ?? 0) !== 0) {
+    throw new Error(
+      'FAIL: telegram_links allowlist closure broken — A updated own chat_id/status (should be service-role only)'
+    )
+  }
+
+  // ── notifications_outbox: service-role-write-only (ALRT-05) ──
+  // 9. An authenticated user must be REJECTED on INSERT — there is no authenticated
+  //    write policy at all; writes are service-role only (rls_fixes/price_cache posture).
+  const { error: outboxInsErr } = await b.from('notifications_outbox').insert({
+    user_id: userIdA,
+    kind: 'price_alert',
+    payload: { text: 'rls-test' },
+  })
+  if (!outboxInsErr) {
+    throw new Error('FAIL: notifications_outbox write hole open — authenticated INSERT succeeded')
+  }
+
   console.log(
-    'PASS: cross-user read/write blocked (transactions, import_batches, symbol_mappings) and price_cache/news_items writes rejected'
+    'PASS: cross-user read/write blocked (transactions, import_batches, symbol_mappings, price_alerts); ' +
+      'telegram_links allowlist closure holds (no UPDATE by anyone, including the owner); ' +
+      'notifications_outbox has no authenticated write policy; price_cache/news_items writes rejected'
   )
   process.exit(0)
 }
