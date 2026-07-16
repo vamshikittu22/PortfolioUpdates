@@ -25,9 +25,21 @@
 import { revalidatePath } from 'next/cache';
 import { createClient } from '@/utils/supabase/server';
 import { getAccountId } from '@/lib/supabase/portfolio';
+import { searchInstrumentsAction as searchInstrumentsFromPortfolio } from './portfolio';
 import type { SupabaseClient } from '@supabase/supabase-js';
+import type { Instrument } from '@/lib/types';
 
-export { searchInstrumentsAction } from './portfolio';
+// A bare `export { searchInstrumentsAction } from './portfolio'` re-export
+// silently breaks Next's "use server" module analysis — the whole file's
+// client-bundle exports resolve to nothing (confirmed live via `npm run
+// build`: "The module has no exports at all", first surfaced once
+// AlertFormDialog/AlertsTable actually imported from this file). A real
+// async function defined directly in this file, delegating to the existing
+// implementation, satisfies the "every export is a Server Function"
+// requirement instead.
+export async function searchInstrumentsAction(query: string): Promise<Instrument[]> {
+  return searchInstrumentsFromPortfolio(query);
+}
 
 type ActionResult = { success: true } | { success: false; error: string };
 

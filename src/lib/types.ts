@@ -32,6 +32,18 @@ export interface Transaction {
   notes?: string | null;
 }
 
+// One raw ledger transaction as shown in a holding's expanded lot list
+// (PORT-08). This is the persisted BUY/SELL/SPLIT/BONUS row itself — the price
+// actually paid on a given date — as opposed to the derived `avgCost` on
+// Holding, which is never stored and is recomputed from these lots.
+export interface HoldingLot {
+  id: string;
+  transactionType: TransactionType;
+  quantity: number;
+  price: number | null; // null for SPLIT/BONUS (no cash flow)
+  transactionDate: string; // ISO date
+}
+
 // Derived (not persisted) — the output of deriveHoldings(), enriched with
 // instrument display data by the data layer (plan 02-04).
 export interface Holding {
@@ -42,6 +54,10 @@ export interface Holding {
   currency: Currency;
   quantity: number;
   avgCost: number;
+  // The individual buy/sell/split/bonus lots this holding was derived from,
+  // in chronological order (PORT-08). `avgCost` above is the derived average;
+  // these are the separate per-date prices actually paid.
+  lots: HoldingLot[];
   // Pricing fields intentionally absent/optional — Phase 3 (PRICE-*) fills these.
   // The UI must show an honest "pending" state, never a fabricated number.
   currentPrice?: number;
@@ -77,11 +93,11 @@ export interface NewsItem {
   category: 'Holdings' | 'Watchlist' | 'Macro';
 }
 
-export interface AlertItem {
-  id: string;
-  symbol: string;
-  type: 'price_above' | 'price_below' | 'sentiment_change' | 'news_spike';
-  threshold: string;
-  isActive: boolean;
-  delivery: 'Email' | 'Push' | 'In-App';
-}
+// The mock-era AlertItem (categorical alert kinds, a string threshold, no
+// instrument identity, Email/Push/In-App delivery) is retired (ALRT-02): a
+// feature is not done until its mock module is deleted. The real price-alert
+// display shape — direction ('above' | 'below'), a numeric threshold,
+// instrument identity, cooldown, and current cached price — lives in
+// PriceAlertView (src/lib/alerts/read.ts, 05-07). Re-exported here so this
+// module remains the single place UI code imports a display type from.
+export type { PriceAlertView } from '@/lib/alerts/read';
