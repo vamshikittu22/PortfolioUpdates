@@ -1,4 +1,5 @@
-import { Briefcase, Plus } from 'lucide-react';
+import { Briefcase, Plus, Upload } from 'lucide-react';
+import Link from 'next/link';
 import { HoldingsTable } from '@/components/dashboard/HoldingsTable';
 import { AllocationChart } from '@/components/dashboard/AllocationChart';
 import { HoldingFormDialog } from '@/components/dashboard/HoldingFormDialog';
@@ -68,6 +69,14 @@ export default async function HoldingsPage() {
 
         <div className="flex items-center gap-3">
           <RefreshPricesButton />
+
+          <Link
+            href="/import"
+            className="flex items-center gap-2 px-4 py-2 bg-muted/40 border border-border text-foreground text-sm font-semibold rounded-xl hover:bg-muted/60 transition-all cursor-pointer"
+          >
+            <Upload className="h-4 w-4" />
+            Import
+          </Link>
 
           <HoldingFormDialog
             mode="add"
