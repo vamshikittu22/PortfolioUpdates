@@ -21,6 +21,12 @@ import { sendTelegramMessage } from '@/lib/telegram/api';
 import { classifySendError } from '@/lib/telegram/classify-send-error';
 import type { EnqueueRow, OutboxRow, DispatchSummary } from './types';
 
+// Re-exported so call sites (05-05's refresh entry points) can import both
+// dispatchOutbox and its result type from this single module, matching the
+// plan's `import { dispatchOutbox, type DispatchSummary } from
+// '@/lib/notifications/outbox'` shape.
+export type { DispatchSummary };
+
 /**
  * Inserts rows into `notifications_outbox`, suppressing a duplicate enqueue
  * inside one cooldown window at the DB layer via the partial unique index
