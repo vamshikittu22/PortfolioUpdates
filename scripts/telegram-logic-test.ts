@@ -10,8 +10,10 @@
  *   - generateLinkToken / isValidLinkTokenShape: single-use high-entropy
  *     deep-link token generation + shape validation.
  *   - escapeHtml / buildPriceAlertMessage: HTML parse_mode message builder
- *     (never MarkdownV2 — sidesteps the 18-char escape footgun) with
- *     4096-char truncation.
+ *     (never Telegram's legacy V2 markdown mode — sidesteps the 18-char
+ *     escape footgun) with 4096-char truncation.
+ *   - classifySendError: the retryable-vs-permanent delivery taxonomy the
+ *     outbox dispatcher (05-04) depends on.
  *
  * Same dependency-free style as scripts/price-pnl-test.ts and
  * scripts/import-parse-test.ts: node:assert/strict, console.log('PASS') +
@@ -23,6 +25,7 @@ import assert from 'node:assert/strict';
 import { parseStartPayload } from '../src/lib/telegram/parse-start-payload';
 import { generateLinkToken, isValidLinkTokenShape } from '../src/lib/telegram/link-token';
 import { escapeHtml, buildPriceAlertMessage } from '../src/lib/telegram/build-message';
+import { classifySendError } from '../src/lib/telegram/classify-send-error';
 
 // --- Case 1: parseStartPayload ---
 function testParseStartPayloadValidToken(): void {
@@ -114,6 +117,62 @@ function testBuildPriceAlertMessageTruncation(): void {
   assert.ok(message.length <= 4096, 'Case 4f: an oversized input must be truncated to <=4096 chars');
 }
 
+// --- Case 5: classifySendError ---
+function testClassifySendError429WithRetryAfter(): void {
+  const result = classifySendError(429, 'Too Many Requests: retry after 23', 23);
+  assert.deepEqual(
+    result,
+    { kind: 'retryable', retryAfterSeconds: 23 },
+    'Case 5a: 429 with retry_after must classify retryable with that retry_after'
+  );
+}
+
+function testClassifySendError429WithoutRetryAfter(): void {
+  const result = classifySendError(429, 'Too Many Requests: retry after 5');
+  assert.equal(result.kind, 'retryable', 'Case 5b: 429 without a retryAfter arg must still be retryable');
+}
+
+function testClassifySendError403Blocked(): void {
+  const result = classifySendError(403, 'Forbidden: bot was blocked by the user');
+  assert.deepEqual(result, { kind: 'permanent' }, 'Case 5c: 403 blocked must be permanent');
+}
+
+function testClassifySendError400ChatNotFound(): void {
+  const result = classifySendError(400, 'Bad Request: chat not found');
+  assert.equal(result.kind, 'permanent', 'Case 5d: 400 chat-not-found must be permanent');
+}
+
+function testClassifySendError400ParseOrTooLong(): void {
+  assert.equal(
+    classifySendError(400, "Bad Request: can't parse entities (some detail)").kind,
+    'permanent',
+    'Case 5e: 400 parse-entities must be permanent'
+  );
+  assert.equal(
+    classifySendError(400, 'Bad Request: message is too long').kind,
+    'permanent',
+    'Case 5f: 400 too-long must be permanent'
+  );
+}
+
+function testClassifySendError5xxAndNetwork(): void {
+  assert.equal(
+    classifySendError(500, 'Internal Server Error').kind,
+    'retryable',
+    'Case 5g: 5xx must be retryable'
+  );
+  assert.equal(
+    classifySendError(null, 'network timeout').kind,
+    'retryable',
+    'Case 5h: a null error_code (transit failure) must be retryable'
+  );
+}
+
+function testClassifySendErrorCaseInsensitive(): void {
+  const result = classifySendError(403, 'FORBIDDEN: BOT WAS BLOCKED BY THE USER');
+  assert.equal(result.kind, 'permanent', 'Case 5i: description matching must be case-insensitive');
+}
+
 function main(): void {
   testParseStartPayloadValidToken();
   testParseStartPayloadBareStart();
@@ -129,8 +188,16 @@ function main(): void {
   testBuildPriceAlertMessageAbove();
   testBuildPriceAlertMessageTruncation();
 
+  testClassifySendError429WithRetryAfter();
+  testClassifySendError429WithoutRetryAfter();
+  testClassifySendError403Blocked();
+  testClassifySendError400ChatNotFound();
+  testClassifySendError400ParseOrTooLong();
+  testClassifySendError5xxAndNetwork();
+  testClassifySendErrorCaseInsensitive();
+
   console.log(
-    'PASS: telegram-logic — Task 1 case groups passed (parse-start-payload/link-token/build-message correct)'
+    'PASS: telegram-logic — all case groups passed (parse-start-payload/link-token/build-message/classify-send-error correct)'
   );
   process.exit(0);
 }
