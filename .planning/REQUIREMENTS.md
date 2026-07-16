@@ -56,11 +56,11 @@ Requirements for this milestone. Each maps to a roadmap phase. Cross-cutting rul
 
 ### Alerts (Telegram)
 
-- [ ] **ALRT-01**: User can link their Telegram account to the app via a bot `/start` handshake (chat id captured, allowlisted)
-- [ ] **ALRT-02**: User can set price alerts (threshold up/down) per ticker
-- [ ] **ALRT-03**: System sends a Telegram message when a price alert triggers, with a cooldown so it does not repeat every refresh
+- [x] **ALRT-01**: User can link their Telegram account to the app via a bot `/start` handshake (chat id captured, allowlisted)
+- [x] **ALRT-02**: User can set price alerts (threshold up/down) per ticker
+- [x] **ALRT-03**: System sends a Telegram message when a price alert triggers, with a cooldown so it does not repeat every refresh
 - [ ] **ALRT-04**: System sends a Telegram alert when significant news is matched to a held ticker
-- [ ] **ALRT-05**: Notifications are written to an outbox and dispatched separately, so a delivery failure retries on the next run instead of being lost
+- [x] **ALRT-05**: Notifications are written to an outbox and dispatched separately, so a delivery failure retries on the next run instead of being lost
 
 ### Digest
 
@@ -142,10 +142,10 @@ Which phases cover which requirements. Populated during roadmap creation (see RO
 | IMPT-03 | Phase 4 | Complete |
 | IMPT-04 | Phase 4 | Complete |
 | IMPT-05 | Phase 4 | Complete |
-| ALRT-01 | Phase 5 | Pending |
-| ALRT-02 | Phase 5 | Pending |
-| ALRT-03 | Phase 5 | Pending |
-| ALRT-05 | Phase 5 | Pending |
+| ALRT-01 | Phase 5 | Complete |
+| ALRT-02 | Phase 5 | Complete |
+| ALRT-03 | Phase 5 | Complete |
+| ALRT-05 | Phase 5 | Complete |
 | NEWS-01 | Phase 6 | Pending |
 | NEWS-02 | Phase 6 | Pending |
 | NEWS-03 | Phase 6 | Pending |
