@@ -106,7 +106,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] 05-01-PLAN.md — Schema: price_alerts (drop legacy alerts) + telegram_links + notifications_outbox + claim_due_notifications RPC + RLS test extension
 - [x] 05-02-PLAN.md — TDD: pure Telegram logic (parse /start, link token, HTML message builder, send-error taxonomy) + npm scripts
 - [x] 05-03-PLAN.md — TDD: pure alert evaluation (level+cooldown trigger, null/failed-price exclusion, dedupe-window key)
-- [ ] 05-04-PLAN.md — Telegram raw-fetch API wrapper + retryable outbox engine (enqueue/dispatch) + secret-guarded dispatch route
+- [x] 05-04-PLAN.md — Telegram raw-fetch API wrapper + retryable outbox engine (enqueue/dispatch) + secret-guarded dispatch route
 - [ ] 05-05-PLAN.md — evaluate-and-enqueue sweep + piggyback onto both price-refresh entry points (failure-isolated)
 - [ ] 05-06-PLAN.md — Telegram handshake Server Actions (generate/poll/unlink) + redeem/read helpers + deploy-gated webhook route
 - [x] 05-07-PLAN.md — Price-alert CRUD Server Actions + getPriceAlerts read (real-master ticker search)
@@ -145,7 +145,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
 | 2. Schema + Persistence + Hydration | 7/7 | Complete   | 2026-07-14 |
 | 3. Price Pipeline + P&L + Scheduling | 6/6 | Complete   | 2026-07-15 |
 | 4. CSV Import | 7/7 | Complete    | 2026-07-16 |
-| 5. Alerts + Telegram | 4/9 | In progress | - |
+| 5. Alerts + Telegram | 5/9 | In progress | - |
 | 6. News Pipeline + Summarization | 0/TBD | Not started | - |
 | 7. Daily Digest | 0/TBD | Not started | - |
 
