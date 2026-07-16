@@ -1,48 +1,62 @@
-import React from 'react';
+import { Bell } from 'lucide-react';
 import { AlertsTable } from '@/components/dashboard/AlertsTable';
-import { Bell, Settings } from 'lucide-react';
+import { TelegramLinkCard } from '@/components/dashboard/TelegramLinkCard';
+import { createClient } from '@/utils/supabase/server';
+import { getAccountId } from '@/lib/supabase/portfolio';
+import { getPriceAlerts } from '@/lib/alerts/read';
+import { getTelegramLink } from '@/lib/telegram/read';
 
-// Phase 5 (ALRT-*) is not live yet — no mock store, no fabricated alerts.
-// AlertsTable already renders a correct "No active alerts" empty state for
-// an empty array. No per-account profile name is needed here (single real
-// account per user, PORT-07).
-export default function AlertsPage() {
+// ALRT-01/ALRT-02 — rewritten in place from the mock-era static page (empty
+// AlertsTable, three Phase-6 marketing cards, a dead "Delivery Settings"
+// button) into an auth-guarded async Server Component reading real data,
+// same pattern as holdings/page.tsx: createClient -> auth.getUser ->
+// if (!user) return null -> getAccountId, then the phase-5 reads
+// (getPriceAlerts, getTelegramLink). No mock, no fabricated alerts — an
+// empty portfolio renders AlertsTable's real "No active alerts" state.
+//
+// The old "Delivery Settings" button's role moves into TelegramLinkCard
+// (the actual Telegram linking handshake, ALRT-01). The Sentiment/Volume
+// marketing cards (Phase 6, not built yet) are removed — only the one
+// feature that actually exists (price alerts) gets an honest note.
+export default async function AlertsPage() {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) return null;
+
+  const accountId = await getAccountId(supabase, user.id);
+
+  const [alerts, link] = await Promise.all([
+    getPriceAlerts(supabase, accountId),
+    getTelegramLink(supabase, user.id),
+  ]);
+
   return (
     <div className="space-y-6 max-w-6xl mx-auto">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
-            <Bell className="h-6 w-6 text-primary" />
-            Alert Management
-          </h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            Configure triggers for your portfolio
-          </p>
-        </div>
-
-        <button className="flex items-center gap-2 px-3 py-1.5 bg-background border border-border/60 hover:bg-muted text-xs font-semibold rounded-lg transition-colors cursor-pointer">
-          <Settings className="h-3.5 w-3.5 text-muted-foreground" />
-          Delivery Settings
-        </button>
+      <div>
+        <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
+          <Bell className="h-6 w-6 text-primary" />
+          Alert Management
+        </h1>
+        <p className="text-sm text-muted-foreground mt-1">
+          Configure price triggers for your portfolio — delivered via Telegram.
+        </p>
       </div>
+
+      <TelegramLinkCard status={link.status} linkedAt={link.linkedAt} />
 
       <div className="grid grid-cols-1 gap-6">
-        <AlertsTable alerts={[]} />
+        <AlertsTable alerts={alerts} />
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="p-5 glass-card rounded-2xl border border-border/50 bg-primary/5">
-          <h3 className="font-bold text-sm mb-2 text-foreground">Price Alerts</h3>
-          <p className="text-xs text-muted-foreground">Trigger notifications when an asset crosses a specific price threshold.</p>
-        </div>
-        <div className="p-5 glass-card rounded-2xl border border-border/50 bg-primary/5">
-          <h3 className="font-bold text-sm mb-2 text-foreground">Sentiment Shifts</h3>
-          <p className="text-xs text-muted-foreground">Get notified when AI detects a major shift in news sentiment for your holdings.</p>
-        </div>
-        <div className="p-5 glass-card rounded-2xl border border-border/50 bg-primary/5">
-          <h3 className="font-bold text-sm mb-2 text-foreground">Volume Spikes</h3>
-          <p className="text-xs text-muted-foreground">Receive alerts when news volume or trading volume anomalously spikes.</p>
-        </div>
+      <div className="p-5 glass-card rounded-2xl border border-border/50 bg-primary/5">
+        <h3 className="font-bold text-sm mb-2 text-foreground">Price Alerts</h3>
+        <p className="text-xs text-muted-foreground">
+          Get a Telegram message when a holding or watched instrument crosses a price threshold you set above or
+          below its current price.
+        </p>
       </div>
     </div>
   );
