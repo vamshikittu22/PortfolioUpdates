@@ -79,3 +79,29 @@ export function evaluateAlerts(
 
   return triggered;
 }
+
+/**
+ * ALRT-05 idempotency backstop — the deterministic cooldown-window bucket
+ * key that backs idempotent outbox enqueue (05-RESEARCH-schema-outbox
+ * "Deterministic dedupe_key"): `price_alert:{alert_id}:{bucket}` where
+ * `bucket = floor(epoch_seconds / (cooldown_minutes * 60))`.
+ *
+ * Identical across re-runs inside the SAME cooldown window — this is what
+ * makes a crash-recovery re-enqueue collide with the
+ * `uniq_notifications_outbox_dedupe` partial unique index and get suppressed
+ * rather than duplicated. Naturally different once `now` crosses into the
+ * NEXT window, allowing the next legitimate fire.
+ *
+ * Known imperfection (documented, acceptable per research): an alert whose
+ * cooldown expires exactly on a bucket boundary can theoretically produce
+ * two adjacent-window keys back-to-back for what is really one triggering
+ * event. This is a one-time near-boundary duplicate risk, not an ongoing
+ * one, and is accepted rather than engineered around.
+ *
+ * Reused verbatim shape for future kinds sharing this column: Phase 6 will
+ * use `news_alert:{userId}:{urlHash}`, Phase 7 `daily_digest:{userId}:{YYYY-MM-DD}`.
+ */
+export function computeAlertDedupeKey(alert: AlertEvalRow, now: Date): string {
+  const bucket = Math.floor(now.getTime() / 1000 / (alert.cooldownMinutes * 60));
+  return `price_alert:${alert.id}:${bucket}`;
+}
