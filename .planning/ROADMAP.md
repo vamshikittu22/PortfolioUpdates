@@ -104,7 +104,7 @@ Decimal phases appear between their surrounding integers in numeric order.
   4. Notifications are written to an outbox and dispatched separately, so a delivery failure retries on the next run instead of being lost.
 **Plans**: 9 plans
 - [x] 05-01-PLAN.md — Schema: price_alerts (drop legacy alerts) + telegram_links + notifications_outbox + claim_due_notifications RPC + RLS test extension
-- [ ] 05-02-PLAN.md — TDD: pure Telegram logic (parse /start, link token, HTML message builder, send-error taxonomy) + npm scripts
+- [x] 05-02-PLAN.md — TDD: pure Telegram logic (parse /start, link token, HTML message builder, send-error taxonomy) + npm scripts
 - [ ] 05-03-PLAN.md — TDD: pure alert evaluation (level+cooldown trigger, null/failed-price exclusion, dedupe-window key)
 - [ ] 05-04-PLAN.md — Telegram raw-fetch API wrapper + retryable outbox engine (enqueue/dispatch) + secret-guarded dispatch route
 - [ ] 05-05-PLAN.md — evaluate-and-enqueue sweep + piggyback onto both price-refresh entry points (failure-isolated)
