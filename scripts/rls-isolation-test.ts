@@ -19,6 +19,7 @@
  *   7. User B cannot READ/WRITE A's price_alerts                 → else "RLS read/write leak" (Phase 5, 05-01)
  *   8. Nobody (not even the owner) can UPDATE telegram_links via the anon key → else "allowlist closure broken" (Phase 5, 05-01)
  *   9. An authenticated user cannot INSERT notifications_outbox   → else "notifications_outbox write hole open" (Phase 5, 05-01)
+ *   10. An authenticated user cannot INSERT news_item_instruments  → else "news_item_instruments write hole open" (Phase 6, 06-01)
  *
  * Checks 3 & 4 are the runnable proof that the plan-01 RLS-fix migration actually took:
  * price_cache / news_items have no per-user column, so before the fix any authenticated
@@ -38,6 +39,10 @@
  * IS the allowlist boundary (ALRT-01), so even the OWNER's own update must affect
  * zero rows, not just a stranger's; notifications_outbox has no authenticated INSERT
  * policy — writes are service-role only (ALRT-05).
+ *
+ * Check 10 extends the same closed-write-hole proof (checks 3, 4, 9) to the Phase 6
+ * (06-01) news_item_instruments join table: authenticated SELECT is kept, authenticated
+ * INSERT is rejected — linking an article to an instrument is service-role only.
  *
  * On success: prints PASS and exits 0. On any failure: throws and exits non-zero.
  * Do NOT weaken this test to make it pass — a failure means the RLS fixes did not take;
@@ -358,10 +363,32 @@ async function main(): Promise<void> {
     throw new Error('FAIL: notifications_outbox write hole open — authenticated INSERT succeeded')
   }
 
+  // ── Phase 6 (06-01): news_item_instruments closed write posture ──
+  // Same shape as check 4 (news_items): an authenticated user (anon key + JWT,
+  // NOT service role) must be REJECTED on INSERT — writes are service-role only.
+  // The uuids need not reference real rows: RLS rejects the INSERT before FK
+  // validation ever runs, so two gen_random_uuid()-shaped literals are fine.
+  const { error: newsInstrErr } = await a.from('news_item_instruments').insert({
+    news_item_id: '00000000-0000-4000-8000-000000000001',
+    instrument_id: '00000000-0000-4000-8000-000000000002',
+  })
+  if (!newsInstrErr) {
+    throw new Error('FAIL: news_item_instruments write hole open — authenticated INSERT succeeded')
+  }
+
+  // Sanity: authenticated SELECT must still succeed (read policy kept).
+  const { error: newsInstrReadErr } = await a
+    .from('news_item_instruments')
+    .select('news_item_id')
+    .limit(1)
+  if (newsInstrReadErr) {
+    throw new Error(`FAIL: authenticated read of news_item_instruments broke: ${newsInstrReadErr.message}`)
+  }
+
   console.log(
     'PASS: cross-user read/write blocked (transactions, import_batches, symbol_mappings, price_alerts); ' +
       'telegram_links allowlist closure holds (no UPDATE by anyone, including the owner); ' +
-      'notifications_outbox has no authenticated write policy; price_cache/news_items writes rejected'
+      'notifications_outbox has no authenticated write policy; price_cache/news_items/news_item_instruments writes rejected'
   )
   process.exit(0)
 }
