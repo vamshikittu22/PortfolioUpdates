@@ -145,7 +145,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
 | 2. Schema + Persistence + Hydration | 7/7 | Complete   | 2026-07-14 |
 | 3. Price Pipeline + P&L + Scheduling | 6/6 | Complete   | 2026-07-15 |
 | 4. CSV Import | 7/7 | Complete    | 2026-07-16 |
-| 5. Alerts + Telegram | 8/9 | In progress | - |
+| 5. Alerts + Telegram | 9/9 | Complete (05-09 live verify DEFERRED — no bot token yet) | 2026-07-16 |
 | 6. News Pipeline + Summarization | 0/TBD | Not started | - |
 | 7. Daily Digest | 0/TBD | Not started | - |
 
