@@ -13,9 +13,15 @@
     "test:import-primitives": "tsx scripts/import-primitives-test.ts",
     "test:import-parse": "tsx scripts/import-parse-test.ts",
     "test:telegram": "tsx scripts/telegram-logic-test.ts",
-    "test:alerts": "tsx scripts/alerts-eval-test.ts"
+    "test:alerts": "tsx scripts/alerts-eval-test.ts",
+    "test:news-dedupe": "tsx scripts/news-dedupe-test.ts",
+    "test:news-match": "tsx scripts/news-match-test.ts",
+    "test:news-parse": "tsx scripts/news-parse-test.ts",
+    "test:news-summarize": "tsx scripts/news-summarize-test.ts",
+    "test:news-alert": "tsx scripts/news-alert-test.ts"
   },
   "dependencies": {
+    "@google/genai": "^2.12.0",
     "@google/generative-ai": "^0.24.1",
     "@radix-ui/react-avatar": "^1.2.0",
     "@radix-ui/react-dialog": "^1.1.17",
@@ -31,6 +37,7 @@
     "@supabase/supabase-js": "^2.108.2",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "fast-xml-parser": "^5.10.1",
     "framer-motion": "^12.41.0",
     "lucide-react": "^1.21.0",
     "next": "16.2.9",
