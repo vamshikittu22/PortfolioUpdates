@@ -73,7 +73,9 @@ export async function summarizeNewsBatch(items: SummarizeBatchItem[]): Promise<S
     return { ...parsed, quotaExhausted: false };
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown AI error';
-    const quotaExhausted = classifyAiError(err) === 'quota';
-    return { results: new Map(), error: message, quotaExhausted };
+    if (classifyAiError(err) === 'quota') {
+      return { results: new Map(), error: message, quotaExhausted: true };
+    }
+    return { results: new Map(), error: message, quotaExhausted: false };
   }
 }
