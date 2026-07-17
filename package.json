@@ -18,7 +18,8 @@
     "test:news-match": "tsx scripts/news-match-test.ts",
     "test:news-parse": "tsx scripts/news-parse-test.ts",
     "test:news-summarize": "tsx scripts/news-summarize-test.ts",
-    "test:news-alert": "tsx scripts/news-alert-test.ts"
+    "test:news-alert": "tsx scripts/news-alert-test.ts",
+    "test:digest-compose": "tsx scripts/digest-compose-test.ts"
   },
   "dependencies": {
     "@google/genai": "^2.12.0",
