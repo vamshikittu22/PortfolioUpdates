@@ -20,6 +20,7 @@
  *   8. Nobody (not even the owner) can UPDATE telegram_links via the anon key → else "allowlist closure broken" (Phase 5, 05-01)
  *   9. An authenticated user cannot INSERT notifications_outbox   → else "notifications_outbox write hole open" (Phase 5, 05-01)
  *   10. An authenticated user cannot INSERT news_item_instruments  → else "news_item_instruments write hole open" (Phase 6, 06-01)
+ *   11. User B cannot READ/UPDATE user A's digest_preferences row  → else "RLS read/write leak" (Phase 7, 07-01)
  *
  * Checks 3 & 4 are the runnable proof that the plan-01 RLS-fix migration actually took:
  * price_cache / news_items have no per-user column, so before the fix any authenticated
@@ -43,6 +44,19 @@
  * Check 10 extends the same closed-write-hole proof (checks 3, 4, 9) to the Phase 6
  * (06-01) news_item_instruments join table: authenticated SELECT is kept, authenticated
  * INSERT is rejected — linking an article to an instrument is service-role only.
+ *
+ * Check 11 extends the same own-row-ownership proof (check 7, price_alerts) to the
+ * Phase 7 (07-01) digest_preferences table: unlike telegram_links' closed-UPDATE
+ * allowlist posture (check 8), digest_preferences DOES have an authenticated UPDATE
+ * policy — a plain boolean opt-in toggle has no allowlist boundary to protect — so
+ * this check proves the OWNER's own update succeeds while a stranger's read AND
+ * update are both rejected (zero rows), the ordinary own-row CRUD shape.
+ *
+ * NOTE: this block (like all of checks 5-11) cannot pass live until every still-
+ * pending migration (csv_import, alerts_telegram, news_pipeline, daily_digest) is
+ * pushed — `npm run test:rls` currently honest-FAILs earlier, at `import_batches`
+ * not found (see .planning/STATE.md). The bar for THIS task is: assertions present
+ * and correctly shaped, `npx tsc --noEmit` clean. Live run is DEFERRED to 07-05.
  *
  * On success: prints PASS and exits 0. On any failure: throws and exits non-zero.
  * Do NOT weaken this test to make it pass — a failure means the RLS fixes did not take;
@@ -385,9 +399,55 @@ async function main(): Promise<void> {
     throw new Error(`FAIL: authenticated read of news_item_instruments broke: ${newsInstrReadErr.message}`)
   }
 
+  // ── Phase 7 (07-01): digest_preferences own-row RLS (DGST-02) ──
+  // Ordinary own-row CRUD shape (like price_alerts, check 7), NOT the closed
+  // telegram_links allowlist posture (check 8) — this table has a real,
+  // authenticated UPDATE policy because a boolean opt-in toggle has no allowlist
+  // boundary to protect.
+
+  // A inserts their own row — MUST succeed (own-row INSERT policy).
+  const { error: digestInsErr } = await a.from('digest_preferences').insert({
+    user_id: userIdA,
+    enabled: true,
+  })
+  if (digestInsErr) {
+    throw new Error(`FAIL: user A could not insert own digest_preferences row: ${digestInsErr.message}`)
+  }
+
+  // 11a. RLS read isolation — B must NOT see A's digest_preferences row.
+  const { data: digestLeak } = await b.from('digest_preferences').select('*').eq('user_id', userIdA)
+  if ((digestLeak?.length ?? 0) !== 0) {
+    throw new Error('FAIL: RLS read leak — B can read A digest_preferences')
+  }
+
+  // 11b. RLS write isolation — B attempting to update A's row MUST affect ZERO
+  // rows (own-row UPDATE USING (auth.uid() = user_id) filters it out).
+  const { data: digestUpdByB } = await b
+    .from('digest_preferences')
+    .update({ enabled: false })
+    .eq('user_id', userIdA)
+    .select()
+  if ((digestUpdByB?.length ?? 0) !== 0) {
+    throw new Error('FAIL: RLS write leak — B updated A digest_preferences row')
+  }
+
+  // 11c. Owner-update proof — A updating their OWN row MUST succeed (the toggle
+  // path DGST-02 depends on).
+  const { data: digestUpdByA, error: digestUpdByAErr } = await a
+    .from('digest_preferences')
+    .update({ enabled: false })
+    .eq('user_id', userIdA)
+    .select()
+  if (digestUpdByAErr || (digestUpdByA?.length ?? 0) !== 1) {
+    throw new Error(
+      `FAIL: user A could not update own digest_preferences row: ${digestUpdByAErr?.message ?? 'zero rows affected'}`
+    )
+  }
+
   console.log(
-    'PASS: cross-user read/write blocked (transactions, import_batches, symbol_mappings, price_alerts); ' +
+    'PASS: cross-user read/write blocked (transactions, import_batches, symbol_mappings, price_alerts, digest_preferences); ' +
       'telegram_links allowlist closure holds (no UPDATE by anyone, including the owner); ' +
+      'digest_preferences owner-update succeeds (real UPDATE policy, unlike telegram_links); ' +
       'notifications_outbox has no authenticated write policy; price_cache/news_items/news_item_instruments writes rejected'
   )
   process.exit(0)
