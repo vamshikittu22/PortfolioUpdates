@@ -33,7 +33,7 @@ The user has **not created a bot yet**, so everything touching the real API is t
 **Findings (HIGH — verified against core.telegram.org/bots/features and /bots/api, 2026-07-16):**
 
 - Create the bot by messaging **@BotFather** → `/newbot` → supply display name + username. Username must be 5–32 chars, Latin letters/numbers/underscores, **must end in `bot`** (e.g. `folio_intel_bot`). BotFather replies with the auth token.
-- **Token format:** `<numeric-bot-id>:<secret>`, e.g. `110201543:AAHdqTcvCH1vGWJxfSeofSAs0K5PALDsaw`. Official warning: "Keep your token secure and store it safely, it can be used by anyone to control your bot."
+- **Token format:** `<numeric-bot-id>:<secret>`, e.g. `<numeric-bot-id>:<35-char-secret>  (defanged - real example removed, see core.telegram.org docs)`. Official warning: "Keep your token secure and store it safely, it can be used by anyone to control your bot."
 - **All API calls:** `https://api.telegram.org/bot<token>/METHOD_NAME` — the literal string `bot` prefixes the token in the path. POST with `application/json` body is supported (also form-encoded/multipart; JSON is what we use).
 - Sanity check once a token exists: `getMe` (no params) returns the bot's id/username — cheapest "is my token valid" probe.
 
