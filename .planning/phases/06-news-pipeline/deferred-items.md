@@ -10,6 +10,14 @@ Items observed during execution that are out of scope for the plan that observed
 - **Action:** None — out of scope for 06-02 (disjoint files per plan assignment: 06-02 owns `src/lib/news/{types,dedupe}.ts` + `scripts/news-dedupe-test.ts`; 06-03 owns `src/lib/news/match.ts` + `scripts/news-match-test.ts`). Expected to resolve once 06-03 completes its own GREEN commit.
 - **Verified isolated:** `npx tsc --noEmit 2>&1 | grep -v "news-match"` produced zero output — confirms 06-02's own files (`src/lib/news/types.ts`, `src/lib/news/dedupe.ts`, `scripts/news-dedupe-test.ts`) are tsc-clean.
 
+## 06-05: transient tsc errors from concurrent 06-04/07-02 in-flight files (self-resolving)
+
+- **Observed during:** 06-05 Task 1, `npx tsc --noEmit` verification step.
+- **Errors:** `scripts/digest-compose-test.ts(20,69)`/`(21,41)`: `Cannot find module '../src/lib/digest/compose'` / `'../src/lib/digest/types'`, plus 5 implicit-`any` parameter errors in the same file; `scripts/news-parse-test.ts(22,68)`: `Cannot find module '../src/lib/news/parse-feeds'`.
+- **Cause:** Concurrently-running 07-02 (`src/lib/digest/*`) and 06-04 (`src/lib/news/parse-feeds.ts`) executors had their own TDD RED test files on disk while their GREEN targets did not yet exist — normal mid-flight TDD state, not a 06-05 defect. Same pattern as the 06-02/06-03 precedent above.
+- **Action:** None — out of scope for 06-05 (disjoint files: 06-05 owns `src/lib/news/{summarize,ai}.ts` + `scripts/news-summarize-test.ts`). Expected to resolve once 06-04/07-02 complete their own GREEN commits.
+- **Verified isolated:** no error referenced `src/lib/news/summarize.ts` or `scripts/news-summarize-test.ts`; `npm run test:news-summarize` passed green independently.
+
 ## 06-02: pre-existing moderate npm audit finding (unrelated to new deps)
 
 - **Observed during:** 06-02 Task 1, post-`npm install` audit check.
