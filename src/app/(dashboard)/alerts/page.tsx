@@ -1,10 +1,12 @@
 import { Bell } from 'lucide-react';
 import { AlertsTable } from '@/components/dashboard/AlertsTable';
 import { TelegramLinkCard } from '@/components/dashboard/TelegramLinkCard';
+import { DigestSettingsCard } from '@/components/dashboard/DigestSettingsCard';
 import { createClient } from '@/utils/supabase/server';
 import { getAccountId } from '@/lib/supabase/portfolio';
 import { getPriceAlerts } from '@/lib/alerts/read';
 import { getTelegramLink } from '@/lib/telegram/read';
+import { getDigestPreference } from '@/lib/digest/read';
 
 // ALRT-01/ALRT-02 — rewritten in place from the mock-era static page (empty
 // AlertsTable, three Phase-6 marketing cards, a dead "Delivery Settings"
@@ -28,9 +30,10 @@ export default async function AlertsPage() {
 
   const accountId = await getAccountId(supabase, user.id);
 
-  const [alerts, link] = await Promise.all([
+  const [alerts, link, digestPref] = await Promise.all([
     getPriceAlerts(supabase, accountId),
     getTelegramLink(supabase, user.id),
+    getDigestPreference(supabase, user.id),
   ]);
 
   return (
@@ -47,15 +50,17 @@ export default async function AlertsPage() {
 
       <TelegramLinkCard status={link.status} linkedAt={link.linkedAt} />
 
+      <DigestSettingsCard enabled={digestPref.enabled} telegramLinked={link.status === 'linked'} />
+
       <div className="grid grid-cols-1 gap-6">
         <AlertsTable alerts={alerts} />
       </div>
 
       <div className="p-5 glass-card rounded-2xl border border-border/50 bg-primary/5">
-        <h3 className="font-bold text-sm mb-2 text-foreground">Price Alerts</h3>
+        <h3 className="font-bold text-sm mb-2 text-foreground">Price Alerts &amp; Daily Digest</h3>
         <p className="text-xs text-muted-foreground">
           Get a Telegram message when a holding or watched instrument crosses a price threshold you set above or
-          below its current price.
+          below its current price — or opt into the daily digest above for a once-a-day portfolio + news summary.
         </p>
       </div>
     </div>
