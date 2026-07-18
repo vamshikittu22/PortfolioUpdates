@@ -23,6 +23,10 @@
 2. **GEMINI_API_KEY** (or confirm reuse of the legacy YouTube-route key) → live batch summarization, quota-degrade observation.
 3. **Migration-push consent** → `20260717120000_news_pipeline.sql` (with the also-pending `20260715230011_csv_import.sql`, `20260716221450_alerts_telegram.sql`, `20260718090000_daily_digest.sql`; NEVER `price_refresh_cron.sql`/`20260718090500_daily_digest_cron.sql` — deploy-gated) → live `test:rls` green, live ingest run, real feed rows in `/news`, persisted summaries never regenerated, significant-news Telegram alert via outbox (also needs TELEGRAM_BOT_TOKEN from 05-09's deferred list).
 
+## Update 2026-07-18: GEMINI live-verified
+
+`GEMINI_API_KEY` turned out to be REAL in `.env.local` (newer `AQ.`-format key). Live smoke test through the actual `summarizeNewsBatch` wrapper (real `@google/genai` call, 2-item batch): `error: null`, `quotaExhausted: false`, 2/2 schema-valid results with summary + whyItMatters — **deferred item 2 is now CLEARED at the API level** (DB persistence of summaries still awaits the migration push). Also: `NEWS_REFRESH_SECRET` + `DIGEST_RUN_SECRET` self-generated into `.env.local`; `FINNHUB_API_KEY` placeholder added (still user-gated).
+
 ## Resume path
 
 Provide the keys + consent → `supabase login`/`link`/selective `db push` → `curl -X POST /api/news/refresh -H "Authorization: Bearer $NEWS_REFRESH_SECRET"` → verify `/news` feed, summary persistence, headline-only degrade with key removed, news alert delivery.
