@@ -17,8 +17,8 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 3: Price Pipeline + P&L + Scheduling** - Free-source prices on a 2–4h schedule + on-demand, multi-currency P&L with honest staleness (completed 2026-07-15)
 - [x] **Phase 4: CSV Import** - Idempotent Groww XLSX + Robinhood CSV import with preview and symbol mapping (completed 2026-07-16)
 - [x] **Phase 5: Alerts + Telegram** - Telegram link handshake, per-ticker price alerts, retryable notifications outbox (completed 2026-07-17)
-- [ ] **Phase 6: News Pipeline + Summarization** - Portfolio-matched, deduped, AI-summarized news feed + significant-news alerts
-- [ ] **Phase 7: Daily Digest** - Once-daily Telegram digest composing portfolio snapshot + summarized news
+- [x] **Phase 6: News Pipeline + Summarization** - Portfolio-matched, deduped, AI-summarized news feed + significant-news alerts (completed 2026-07-18)
+- [x] **Phase 7: Daily Digest** - Once-daily Telegram digest composing portfolio snapshot + summarized news (completed 2026-07-18)
 
 ## Phase Details
 
@@ -146,8 +146,8 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
 | 3. Price Pipeline + P&L + Scheduling | 6/6 | Complete   | 2026-07-15 |
 | 4. CSV Import | 7/7 | Complete    | 2026-07-16 |
 | 5. Alerts + Telegram | 9/9 | Complete    | 2026-07-17 |
-| 6. News Pipeline + Summarization | 0/TBD | Not started | - |
-| 7. Daily Digest | 0/TBD | Not started | - |
+| 6. News Pipeline + Summarization | 0/TBD | Complete    | 2026-07-18 |
+| 7. Daily Digest | 0/TBD | Complete    | 2026-07-18 |
 
 ---
 *Roadmap created: 2026-07-13*

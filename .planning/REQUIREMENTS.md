@@ -48,24 +48,24 @@ Requirements for this milestone. Each maps to a roadmap phase. Cross-cutting rul
 
 ### News
 
-- [ ] **NEWS-01**: System fetches news for held and watched tickers from free sources (Finnhub for US; Google News + Indian publisher RSS for NSE/BSE)
-- [ ] **NEWS-02**: News items are deduplicated (by URL and normalized-title hash) and matched to the correct ticker(s) with word-boundary / company-name rules to avoid false positives
-- [ ] **NEWS-03**: User sees a news feed filtered to their portfolio, newest first, with source and timestamp
-- [ ] **NEWS-04**: New matched items are summarized by AI in batches (via `@google/genai`) with a short "why it matters" for the portfolio; summaries persist and are not regenerated
-- [ ] **NEWS-05**: When the AI budget is exhausted, the feed degrades to matched headlines-only rather than failing
+- [x] **NEWS-01**: System fetches news for held and watched tickers from free sources (Finnhub for US; Google News + Indian publisher RSS for NSE/BSE)
+- [x] **NEWS-02**: News items are deduplicated (by URL and normalized-title hash) and matched to the correct ticker(s) with word-boundary / company-name rules to avoid false positives
+- [x] **NEWS-03**: User sees a news feed filtered to their portfolio, newest first, with source and timestamp
+- [x] **NEWS-04**: New matched items are summarized by AI in batches (via `@google/genai`) with a short "why it matters" for the portfolio; summaries persist and are not regenerated
+- [x] **NEWS-05**: When the AI budget is exhausted, the feed degrades to matched headlines-only rather than failing
 
 ### Alerts (Telegram)
 
 - [x] **ALRT-01**: User can link their Telegram account to the app via a bot `/start` handshake (chat id captured, allowlisted)
 - [x] **ALRT-02**: User can set price alerts (threshold up/down) per ticker
 - [x] **ALRT-03**: System sends a Telegram message when a price alert triggers, with a cooldown so it does not repeat every refresh
-- [ ] **ALRT-04**: System sends a Telegram alert when significant news is matched to a held ticker
+- [x] **ALRT-04**: System sends a Telegram alert when significant news is matched to a held ticker
 - [x] **ALRT-05**: Notifications are written to an outbox and dispatched separately, so a delivery failure retries on the next run instead of being lost
 
 ### Digest
 
-- [ ] **DGST-01**: Once per day, the system composes a portfolio snapshot (total value, day P&L, top movers) plus the day's summarized portfolio news into a single Telegram digest
-- [ ] **DGST-02**: User can enable/disable the daily digest and the digest respects their linked Telegram account
+- [x] **DGST-01**: Once per day, the system composes a portfolio snapshot (total value, day P&L, top movers) plus the day's summarized portfolio news into a single Telegram digest
+- [x] **DGST-02**: User can enable/disable the daily digest and the digest respects their linked Telegram account
 
 ### Existing Modules (wiring)
 
@@ -146,14 +146,14 @@ Which phases cover which requirements. Populated during roadmap creation (see RO
 | ALRT-02 | Phase 5 | Complete |
 | ALRT-03 | Phase 5 | Complete |
 | ALRT-05 | Phase 5 | Complete |
-| NEWS-01 | Phase 6 | Pending |
-| NEWS-02 | Phase 6 | Pending |
-| NEWS-03 | Phase 6 | Pending |
-| NEWS-04 | Phase 6 | Pending |
-| NEWS-05 | Phase 6 | Pending |
-| ALRT-04 | Phase 6 | Pending |
-| DGST-01 | Phase 7 | Pending |
-| DGST-02 | Phase 7 | Pending |
+| NEWS-01 | Phase 6 | Complete |
+| NEWS-02 | Phase 6 | Complete |
+| NEWS-03 | Phase 6 | Complete |
+| NEWS-04 | Phase 6 | Complete |
+| NEWS-05 | Phase 6 | Complete |
+| ALRT-04 | Phase 6 | Complete |
+| DGST-01 | Phase 7 | Complete |
+| DGST-02 | Phase 7 | Complete |
 
 **Coverage:**
 
