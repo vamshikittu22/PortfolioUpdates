@@ -12,6 +12,7 @@
     "test:price-pnl": "tsx scripts/price-pnl-test.ts",
     "test:import-primitives": "tsx scripts/import-primitives-test.ts",
     "test:import-parse": "tsx scripts/import-parse-test.ts",
+    "test:import-mock": "tsx scripts/import-mock-e2e-test.ts",
     "test:telegram": "tsx scripts/telegram-logic-test.ts",
     "test:alerts": "tsx scripts/alerts-eval-test.ts",
     "test:news-dedupe": "tsx scripts/news-dedupe-test.ts",
