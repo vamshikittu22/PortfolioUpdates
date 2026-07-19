@@ -1,0 +1,10 @@
+"Activity Date","Process Date","Settle Date","Instrument","Description","Trans Code","Quantity","Price","Amount"
+"9/18/2023","9/20/2023","9/20/2023","AAPL","Apple Inc.","Buy","10","178.50","($1,785.00)"
+"9/25/2023","9/27/2023","9/27/2023","MSFT","Microsoft Corp.","Buy","4","315.75","($1,263.00)"
+"10/5/2023","10/9/2023","10/9/2023","NVDA","NVIDIA Corp.","Buy","6","440.20","($2,641.20)"
+"10/12/2023","10/16/2023","10/16/2023","TSLA","Tesla Inc.","Buy","8","255.40","($2,043.20)"
+"11/2/2023","11/6/2023","11/6/2023","INFY","Infosys Ltd. ADR","Buy","20","17.85","($357.00)"
+"11/15/2023","11/17/2023","11/17/2023","GOOGL","Alphabet Inc. Class A","Buy","5","132.60","($663.00)"
+"12/14/2023","12/14/2023","12/14/2023","AAPL","Apple Inc.","CDIV","","","$2.40"
+"12/31/2023","12/31/2023","12/31/2023","","","DFEE","","","($5.00)"
+The activity statement is provided for informational purposes only and is not a substitute for your official account records.
