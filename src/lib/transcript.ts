@@ -1,8 +1,53 @@
-// Transcript fetcher using the `youtube-transcript` npm package
-// No API key required — scrapes YouTube's transcript API directly
-// Supports multilingual transcripts (Telugu, Hindi, English, etc.)
+// Transcript fetcher using YouTube's private InnerTube API directly.
+//
+// No API key required. We POST to https://www.youtube.com/youtubei/v1/player
+// with a public mobile-app ("ANDROID") client context — the same request the
+// official YouTube app makes. The response contains the caption track list
+// (captions.playerCaptionsTracklistRenderer.captionTracks) with a signed
+// baseUrl per track, which we fetch as `fmt=json3` and parse into text.
+//
+// Why this replaced the `youtube-transcript` npm package: that package scraped
+// `ytInitialPlayerResponse` from the watch page and required an English track
+// (native → en → hi). YouTube's page changes broke it for most videos, and it
+// silently failed for auto-generated (ASR) NON-English tracks — so Hindi/Telugu
+// finance videos degraded to title-only analysis. This fetcher never requires
+// English: it picks the best available track in the video's ORIGINAL language.
+//
+// NOTE: InnerTube is undocumented and reverse-engineered. The client version
+// below may need bumping if YouTube changes its contract. There is no secret
+// here — the client name/version are public values baked into youtube.com and
+// the official apps; no INNERTUBE_API_KEY is needed for the player endpoint.
 
-import { YoutubeTranscript } from 'youtube-transcript';
+const INNERTUBE_URL = 'https://www.youtube.com/youtubei/v1/player?prettyPrint=false';
+
+// Public InnerTube clients (verified working). ANDROID is primary; IOS is a
+// fallback used only when ANDROID fails to return a usable response, for
+// resilience against client-specific breakage. Neither requires an API key.
+interface InnerTubeClient {
+  clientName: string;
+  clientVersion: string;
+  clientNameId: string; // X-YouTube-Client-Name header value
+  userAgent: string;
+  extra?: Record<string, unknown>;
+}
+
+const CLIENTS: InnerTubeClient[] = [
+  {
+    clientName: 'ANDROID',
+    clientVersion: '20.10.38',
+    clientNameId: '3',
+    userAgent: 'com.google.android.youtube/20.10.38 (Linux; U; Android 11) gzip',
+    extra: { androidSdkVersion: 30 },
+  },
+  {
+    clientName: 'IOS',
+    clientVersion: '20.10.4',
+    clientNameId: '5',
+    userAgent: 'com.google.ios.youtube/20.10.4 (iPhone16,2; U; CPU iOS 18_3_2 like Mac OS X)',
+  },
+];
+
+const FETCH_TIMEOUT_MS = 15_000;
 
 export interface TranscriptResult {
   video_id: string;
@@ -11,6 +56,8 @@ export interface TranscriptResult {
   segment_count: number;
   char_count: number;
   detected_lang: string;
+  /** Whether the chosen track was human-authored ('manual') or auto-generated ('asr'). */
+  source_kind: 'manual' | 'asr' | null;
   available: boolean;
   error?: string;
 }
@@ -31,15 +78,125 @@ const LANG_NAMES: Record<string, string> = {
 };
 
 export function getLanguageName(code: string): string {
-  return LANG_NAMES[code] || code;
+  return LANG_NAMES[baseLang(code)] || code;
+}
+
+/** Normalise a caption languageCode to its base (e.g. 'en-IN' → 'en', 'te' → 'te'). */
+function baseLang(code: string): string {
+  return (code || '').split('-')[0].toLowerCase();
+}
+
+// Shape of the pieces of the InnerTube player response we consume.
+interface CaptionTrack {
+  baseUrl: string;
+  languageCode: string;
+  kind?: string; // 'asr' for auto-generated; absent for manual tracks
+}
+
+interface Json3Segment {
+  utf8?: string;
+}
+interface Json3Event {
+  segs?: Json3Segment[];
+}
+
+async function fetchWithTimeout(url: string, init: RequestInit): Promise<Response> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+  try {
+    return await fetch(url, { ...init, signal: controller.signal });
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+/** Call the InnerTube player endpoint with a given client. Returns parsed JSON. */
+async function callPlayer(videoId: string, client: InnerTubeClient): Promise<any> {
+  const res = await fetchWithTimeout(INNERTUBE_URL, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'User-Agent': client.userAgent,
+      'Accept-Language': 'en',
+      'X-YouTube-Client-Name': client.clientNameId,
+      'X-YouTube-Client-Version': client.clientVersion,
+    },
+    body: JSON.stringify({
+      context: {
+        client: {
+          clientName: client.clientName,
+          clientVersion: client.clientVersion,
+          hl: 'en',
+          gl: 'US',
+          ...(client.extra || {}),
+        },
+      },
+      videoId,
+    }),
+  });
+  if (!res.ok) {
+    throw new Error(`InnerTube player HTTP ${res.status}`);
+  }
+  return res.json();
 }
 
 /**
- * Fetch the transcript for a YouTube video.
- * Multi-language fallback strategy:
- *   1. Try without language constraint (gets the video's native language)
- *   2. Try English specifically
- *   3. If both fail, report unavailable
+ * Choose the best caption track. NEVER requires English.
+ * Priority:
+ *   1. Manual (human) caption in the video's ORIGINAL language.
+ *   2. Manual caption in ANY language (e.g. a human English translation).
+ *   3. ASR (auto-generated) caption in the ORIGINAL language — the core fix
+ *      for Hindi/Telugu videos that only carry a native auto-caption.
+ *   4. ASR caption in any language.
+ * The "original language" is inferred from the ASR track's languageCode, which
+ * YouTube derives from the spoken audio.
+ */
+function pickBestTrack(tracks: CaptionTrack[]): CaptionTrack | null {
+  if (!tracks || tracks.length === 0) return null;
+
+  const manual = tracks.filter((t) => t.kind !== 'asr');
+  const asr = tracks.filter((t) => t.kind === 'asr');
+  const originalLang = asr.length > 0 ? baseLang(asr[0].languageCode) : null;
+
+  if (originalLang) {
+    const manualOriginal = manual.find((t) => baseLang(t.languageCode) === originalLang);
+    if (manualOriginal) return manualOriginal;
+  }
+  if (manual.length > 0) return manual[0];
+  if (originalLang) {
+    const asrOriginal = asr.find((t) => baseLang(t.languageCode) === originalLang);
+    if (asrOriginal) return asrOriginal;
+  }
+  return asr[0] || tracks[0] || null;
+}
+
+/** Fetch a caption track's baseUrl as json3 and return its ordered text segments. */
+async function fetchTrackSegments(track: CaptionTrack, userAgent: string): Promise<string[]> {
+  // baseUrl already carries `&fmt=srv3` (XML). Override it to json3 which is
+  // cleaner to parse. URL.searchParams.set replaces the existing param.
+  const url = new URL(track.baseUrl);
+  url.searchParams.set('fmt', 'json3');
+
+  const res = await fetchWithTimeout(url.toString(), {
+    headers: { 'User-Agent': userAgent, 'Accept-Language': 'en' },
+  });
+  if (!res.ok) throw new Error(`Caption fetch HTTP ${res.status}`);
+
+  const data = JSON.parse(await res.text()) as { events?: Json3Event[] };
+  const segments: string[] = [];
+  for (const ev of data.events || []) {
+    if (!ev.segs) continue;
+    const line = ev.segs.map((s) => s.utf8 || '').join('');
+    const cleaned = line.replace(/\s+/g, ' ').trim();
+    if (cleaned) segments.push(cleaned);
+  }
+  return segments;
+}
+
+/**
+ * Fetch the transcript for a YouTube video via the InnerTube API.
+ * Returns available:false with a clear error when the video has no caption
+ * tracks or is not playable — it NEVER fabricates a transcript.
  */
 export async function fetchTranscript(videoId: string): Promise<TranscriptResult> {
   const emptyResult: TranscriptResult = {
@@ -49,72 +206,81 @@ export async function fetchTranscript(videoId: string): Promise<TranscriptResult
     segment_count: 0,
     char_count: 0,
     detected_lang: '',
+    source_kind: null,
     available: false,
   };
 
-  // Strategy 1: Fetch without language constraint (native language)
-  try {
-    const segments = await YoutubeTranscript.fetchTranscript(videoId);
+  let lastError = 'Transcript unavailable for this video';
+  let sawPlayableNoTracks = false;
 
-    if (segments && segments.length > 0) {
-      return buildResult(videoId, segments);
+  for (const client of CLIENTS) {
+    let player: any;
+    try {
+      player = await callPlayer(videoId, client);
+    } catch (err: any) {
+      lastError = `InnerTube request failed: ${err?.message || 'network error'}`;
+      continue;
     }
-  } catch {
-    // Native fetch failed, try English next
-  }
 
-  // Strategy 2: Try English explicitly
-  try {
-    const segments = await YoutubeTranscript.fetchTranscript(videoId, { lang: 'en' });
+    const status: string = player?.playabilityStatus?.status || 'UNKNOWN';
+    const tracks: CaptionTrack[] =
+      player?.captions?.playerCaptionsTracklistRenderer?.captionTracks || [];
 
-    if (segments && segments.length > 0) {
-      return buildResult(videoId, segments);
+    if (status !== 'OK') {
+      lastError = `Video not playable (${status})`;
+      continue; // try next client — it may be a client-specific gate
     }
-  } catch {
-    // English also failed
-  }
-
-  // Strategy 3: Try Hindi (common for Indian financial content)
-  try {
-    const segments = await YoutubeTranscript.fetchTranscript(videoId, { lang: 'hi' });
-
-    if (segments && segments.length > 0) {
-      return buildResult(videoId, segments);
+    if (tracks.length === 0) {
+      // Playable but genuinely has no captions — a definitive answer.
+      sawPlayableNoTracks = true;
+      lastError = 'Video has no caption tracks';
+      continue;
     }
-  } catch {
-    // Hindi also failed
+
+    const track = pickBestTrack(tracks);
+    if (!track) {
+      sawPlayableNoTracks = true;
+      lastError = 'No usable caption track found';
+      continue;
+    }
+
+    try {
+      const segments = await fetchTrackSegments(track, client.userAgent);
+      if (segments.length === 0) {
+        lastError = 'Caption track was empty';
+        continue;
+      }
+      return buildResult(videoId, segments, track);
+    } catch (err: any) {
+      lastError = `Caption download failed: ${err?.message || 'network error'}`;
+      continue;
+    }
   }
 
   return {
     ...emptyResult,
-    error: 'Transcript unavailable for this video in any language',
+    error: sawPlayableNoTracks ? 'No captions available for this video' : lastError,
   };
 }
 
 /**
- * Build a TranscriptResult from raw segments.
+ * Build a TranscriptResult from ordered json3 text segments.
  * Handles non-Latin scripts (Telugu, Hindi, etc.) properly for counting.
  */
 function buildResult(
   videoId: string,
-  segments: { text: string; duration: number; offset: number; lang?: string }[]
+  segments: string[],
+  track: CaptionTrack
 ): TranscriptResult {
-  // Join all segments into one clean block of text
   const full_text = segments
-    .map((s) => s.text.replace(/\[.*?\]/g, '').trim()) // strip [Music], [Applause] etc.
+    .map((s) => s.replace(/\[.*?\]/g, '').trim()) // strip [Music], [संगीत], [♪♪♪] etc.
     .filter(Boolean)
     .join(' ')
     .replace(/\s{2,}/g, ' ')
     .trim();
 
-  // Detect language from the first segment that has a lang field,
-  // or infer from character analysis
-  const detectedLang = segments.find((s) => s.lang)?.lang || inferLanguage(full_text);
-
-  // Word count: for Latin scripts, split on whitespace.
-  // For non-Latin (Indic scripts), whitespace splitting still works
-  // because auto-generated captions add spaces. But we also track
-  // segment count and char count as more reliable metrics.
+  // Language comes straight from the chosen track's languageCode (accurate).
+  const detected_lang = baseLang(track.languageCode) || inferLanguage(full_text);
   const word_count = full_text.split(/\s+/).filter(Boolean).length;
 
   return {
@@ -123,25 +289,25 @@ function buildResult(
     word_count,
     segment_count: segments.length,
     char_count: full_text.length,
-    detected_lang: detectedLang,
+    detected_lang,
+    source_kind: track.kind === 'asr' ? 'asr' : 'manual',
     available: true,
   };
 }
 
 /**
  * Infer language from text content by checking Unicode script ranges.
- * This is a heuristic — not perfect, but good enough for prompt context.
+ * Fallback only — used when a track has no languageCode (rare).
  */
 function inferLanguage(text: string): string {
-  // Count characters in various script ranges
-  const teluguChars = (text.match(/[\u0C00-\u0C7F]/g) || []).length;
-  const devanagariChars = (text.match(/[\u0900-\u097F]/g) || []).length;
+  const teluguChars = (text.match(/[ఀ-౿]/g) || []).length;
+  const devanagariChars = (text.match(/[ऀ-ॿ]/g) || []).length;
   const latinChars = (text.match(/[a-zA-Z]/g) || []).length;
-  const tamilChars = (text.match(/[\u0B80-\u0BFF]/g) || []).length;
-  const kannadaChars = (text.match(/[\u0C80-\u0CFF]/g) || []).length;
+  const tamilChars = (text.match(/[஀-௿]/g) || []).length;
+  const kannadaChars = (text.match(/[ಀ-೿]/g) || []).length;
 
   const max = Math.max(teluguChars, devanagariChars, latinChars, tamilChars, kannadaChars);
-  if (max === 0) return 'en'; // default
+  if (max === 0) return 'en';
 
   if (max === teluguChars) return 'te';
   if (max === devanagariChars) return 'hi';
