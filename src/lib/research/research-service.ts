@@ -15,6 +15,31 @@ import type {
 import { REGISTERED_STOCKS } from './stocks-list';
 
 // ---------------------------------------------------------------------------
+// Provenance — so the UI can label a report honestly instead of presenting
+// every report as live, audited data.
+//   - 'sample'              : hand-authored demonstration fixture (the 3
+//                             seeded tickers) — illustrative, NOT live data.
+//   - 'gemini-live'         : AI-compiled from live Yahoo Finance figures.
+//   - 'hybrid-fallback-mock': live prices + templated/estimated analysis
+//                             (AI was unavailable).
+//   - 'cache'               : a previously compiled report, re-served.
+//   - 'mock-seeded'         : API seeded a demo fixture into cache.
+//   - 'unknown'             : provenance not reported by the API.
+// ---------------------------------------------------------------------------
+export type ResearchSource =
+  | 'sample'
+  | 'gemini-live'
+  | 'hybrid-fallback-mock'
+  | 'cache'
+  | 'mock-seeded'
+  | 'unknown';
+
+export interface ResearchResult {
+  report: ResearchReport;
+  source: ResearchSource;
+}
+
+// ---------------------------------------------------------------------------
 // Internal helpers
 // ---------------------------------------------------------------------------
 
@@ -65,14 +90,16 @@ export async function searchCompanies(
  */
 export async function getResearchReport(
   ticker: string,
-): Promise<ResearchReport | null> {
+): Promise<ResearchResult | null> {
   const normalised = ticker.trim().toUpperCase();
-  
-  // 1. Try static mock data first
+
+  // 1. Try static mock data first — these are hand-authored demonstration
+  //    fixtures, so tag them 'sample' and NEVER let the UI present them as
+  //    live, audited market data.
   const { MOCK_RESEARCH_REPORTS } = await import('./mock-research-data');
   if (MOCK_RESEARCH_REPORTS[normalised]) {
     await simulateDelay(800);
-    return MOCK_RESEARCH_REPORTS[normalised];
+    return { report: MOCK_RESEARCH_REPORTS[normalised], source: 'sample' };
   }
 
   // 2. Dynamic Fallback: Call local API endpoint to query Gemini
@@ -91,7 +118,11 @@ export async function getResearchReport(
     }
 
     const data = await res.json();
-    return data.report;
+    if (!data?.report) return null;
+    // Forward the API's own provenance ('gemini-live' | 'hybrid-fallback-mock'
+    // | 'cache' | 'mock-seeded') so the report can be labeled honestly.
+    const source = (data.source as ResearchSource) ?? 'unknown';
+    return { report: data.report, source };
   } catch (err: any) {
     console.error('Failed to dynamically analyze ticker via API:', err);
     throw new Error(err.message || 'Workflow compilation failed');

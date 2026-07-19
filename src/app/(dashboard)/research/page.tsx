@@ -12,7 +12,7 @@ import { ValuationTab } from '@/components/research/ValuationTab';
 import { OwnershipRisksTab } from '@/components/research/OwnershipRisksTab';
 import { NewsTimelineTab } from '@/components/research/NewsTimelineTab';
 import { ScenariosTab } from '@/components/research/ScenariosTab';
-import { getResearchReport, getAvailableStocks } from '@/lib/research/research-service';
+import { getResearchReport, getAvailableStocks, type ResearchSource } from '@/lib/research/research-service';
 import type { ResearchReport, CompanySearchResult } from '@/lib/research/research-types';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { cn } from '@/utils/cn';
@@ -41,6 +41,7 @@ function ResearchPageContent() {
 
   const [selectedTicker, setSelectedTicker] = useState<string>('');
   const [report, setReport] = useState<ResearchReport | null>(null);
+  const [reportSource, setReportSource] = useState<ResearchSource | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [availableStocks, setAvailableStocks] = useState<CompanySearchResult[]>([]);
@@ -88,10 +89,12 @@ function ResearchPageContent() {
       try {
         const data = await getResearchReport(selectedTicker);
         if (data) {
-          setReport(data);
+          setReport(data.report);
+          setReportSource(data.source);
         } else {
           setError(`Company with ticker "${selectedTicker}" could not be resolved.`);
           setReport(null);
+          setReportSource(null);
         }
       } catch (err) {
         setError('An error occurred while compiling the research report. Please try again.');
@@ -175,6 +178,40 @@ function ResearchPageContent() {
       {/* Report Resolved state */}
       {!isLoading && report && (
         <div className="space-y-6 animate-in fade-in duration-300">
+          {/* Data-provenance banner — honest labeling so seeded demonstration
+              fixtures and AI-estimated fallbacks are never presented as live,
+              audited market data. */}
+          {(reportSource === 'sample' || reportSource === 'mock-seeded') && (
+            <div className="flex items-start gap-2 p-3 rounded-xl border border-warning/30 bg-warning/10 text-xs sm:text-sm text-foreground/90">
+              <ShieldAlert className="h-4 w-4 shrink-0 text-warning mt-0.5" />
+              <p>
+                <strong className="text-warning">Demonstration data.</strong>{' '}
+                Figures for {report.companyProfile.name} are hand-authored, illustrative
+                samples for previewing the module — not live market data. Search a ticker
+                outside the seeded demo set to compile a report from live sources.
+              </p>
+            </div>
+          )}
+          {reportSource === 'hybrid-fallback-mock' && (
+            <div className="flex items-start gap-2 p-3 rounded-xl border border-warning/30 bg-warning/10 text-xs sm:text-sm text-foreground/90">
+              <ShieldAlert className="h-4 w-4 shrink-0 text-warning mt-0.5" />
+              <p>
+                <strong className="text-warning">Partial data.</strong>{' '}
+                Live AI compilation was unavailable, so this report combines live Yahoo
+                Finance prices with estimated/templated analysis. Treat the narrative
+                sections as placeholders rather than researched conclusions.
+              </p>
+            </div>
+          )}
+          {(reportSource === 'gemini-live' || reportSource === 'cache') && (
+            <div className="flex items-start gap-2 p-3 rounded-xl border border-primary/20 bg-primary/5 text-xs sm:text-sm text-muted-foreground">
+              <Building2 className="h-4 w-4 shrink-0 text-primary mt-0.5" />
+              <p>
+                AI-compiled from live Yahoo Finance figures{reportSource === 'cache' ? ' (cached)' : ''}.
+                Narrative analysis is model-generated — verify against primary filings before acting.
+              </p>
+            </div>
+          )}
           <Tabs defaultValue="overview" className="w-full">
             {/* Horizontal Scrollable Tabs bar on mobile */}
             <div className="overflow-x-auto pb-1.5 -mx-4 px-4 md:mx-0 md:px-0">
