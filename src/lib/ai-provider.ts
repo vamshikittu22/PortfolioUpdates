@@ -18,7 +18,7 @@ function buildPrompt(transcript: string, videoTitle: string, channelName: string
   const langName = getLanguageName(detectedLang);
   const isNonEnglish = detectedLang !== 'en';
   const langContext = isNonEnglish
-    ? `\n\nCRITICAL LANGUAGE NOTE: The transcript is in ${langName} (language code: ${detectedLang}). The text may be in ${langName} script or transliterated Latin script. You MUST:\n- Read and understand the ${langName} content fully\n- Translate ALL output values (summary_bullets, key_themes) into clear English\n- Correctly identify stock tickers, company names, and financial terms even when spoken/written in ${langName}\n- Match spoken company names to their NSE/BSE ticker symbols (e.g., "రిలయన్స్" or "रिलायंस" → RELIANCE)`
+    ? `\n\nCRITICAL LANGUAGE REQUIREMENT: This transcript is in ${langName} (language code: "${detectedLang}"), written in ${langName} script and/or transliterated Latin script. You read ${langName} natively — do NOT ask for a translation and do NOT transcribe ${langName} text into the output. You MUST:\n- Fully comprehend the ${langName} content directly.\n- Write EVERY output value (all summary_bullets and all key_themes) in ENGLISH. Not a single bullet or theme may be left in ${langName} or in transliteration — the reader speaks only English.\n- Correctly identify stock tickers, company names, and financial terms even when spoken/written in ${langName}.\n- Match spoken company names to their NSE/BSE ticker symbols (e.g., "రిలయన్స్" or "रिलायंस" → RELIANCE).`
     : '';
 
   if (isTitleOnly) {
